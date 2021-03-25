@@ -1,0 +1,5 @@
+- try high order shp functions
+- figure out oversetting fixing
+- try legendre poly -- need to fix how u is found b/c it's no longer interpolatory and l2 proj of IC
+- try rk3
+- Figure out why u is increasing?!
