@@ -14,7 +14,7 @@ program conservative_overset
   type(mesh), allocatable :: msh(:)
   allocate(msh(nmesh))
   !
-  ntime= 2
+  ntime= 20
   dt=0.02d0
   !
   call set_type('linear_advection',1d0)
