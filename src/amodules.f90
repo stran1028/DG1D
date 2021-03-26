@@ -21,7 +21,7 @@ module code_types
      real*8, allocatable :: rhsv(:,:,:) !< rhs vector (nfield, nshp, nelem)
      real*8, allocatable :: rhsf(:,:,:) !< rhs vector (nfield, nshp, nelem)
      real*8, allocatable :: mass(:,:,:,:) !< Mass matrix (nfield, nshp, nshp)
-     real*8, allocatable :: detJ(:)      !< det of jacobian (ie length) size(nelem)
+     real*8, allocatable :: dx(:)      !< element size
      real*8, allocatable :: wgauss(:)   !< weight of gauss pts (ngauss)
      real*8, allocatable :: xgauss(:)   !< location of gauss pts (ngauss)
      real*8, allocatable :: shp(:,:)     !< shape function values at qpts for parent element (ngauss,nshp)

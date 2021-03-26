@@ -24,7 +24,7 @@ subroutine computeRHS(msh)
       qtmp = SUM(qvals)
       do k = 1,msh%nshp
          call volint(qtmp,vol)
-         vol = vol*msh%dshp(j,k)*msh%detJ(i)*msh%wgauss(j)
+         vol = vol*msh%dshp(j,k)*msh%wgauss(j)
          msh%rhs(1,k,i) = msh%rhs(1,k,i) + vol 
          msh%rhsv(1,k,i) = msh%rhsv(1,k,i) + vol 
       enddo 
@@ -47,8 +47,8 @@ subroutine computeRHS(msh)
         call flux(ql,qr,flx)
         if (msh%iblank(msh%e2n(2,e1)) > 0) then 
           do j = 1,msh%nshp
-            msh%rhs(:,j,i) = msh%rhs(:,j,i) + w(j)*flx*msh%detJ(i)
-            msh%rhsf(:,j,i) = msh%rhsf(:,j,i) + w(j)*flx*msh%detJ(i)
+            msh%rhs(:,j,i) = msh%rhs(:,j,i) + w(j)*flx
+            msh%rhsf(:,j,i) = msh%rhsf(:,j,i) + w(j)*flx
           enddo
         endif
         
@@ -62,8 +62,8 @@ subroutine computeRHS(msh)
         call flux(ql,qr,flx)
         if (msh%iblank(msh%e2n(1,e1)) > 0) then 
           do j = 1,msh%nshp
-            msh%rhs(:,j,i) = msh%rhs(:,j,i) - w(j)*flx*msh%detJ(i)
-            msh%rhsf(:,j,i) = msh%rhsf(:,j,i) - w(j)*flx*msh%detJ(i)
+            msh%rhs(:,j,i) = msh%rhs(:,j,i) - w(j)*flx
+            msh%rhsf(:,j,i) = msh%rhsf(:,j,i) - w(j)*flx
           enddo
         endif
     endif

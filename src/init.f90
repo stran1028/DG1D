@@ -33,7 +33,7 @@ subroutine init_mesh(msh,xlim,dx,iperiodic)
   allocate(msh%x(msh%nnodes))
   allocate(msh%e2n(2,msh%nelem)) ! element to node number map? 
   allocate(msh%xe(2,msh%nelem))
-  allocate(msh%detJ(msh%nelem))
+  allocate(msh%dx(msh%nelem))
   do i=1,msh%nelem
      msh%x(2*i-1) = xlim(1)+(i-1)*dxmod ! left node cood
      msh%x(2*i) = xlim(1)+(i)*dxmod ! right node cood
@@ -41,7 +41,7 @@ subroutine init_mesh(msh,xlim,dx,iperiodic)
      msh%e2n(2,i)=2*i                   ! right node id
      msh%xe(1,i)=msh%x(2*i-1)               ! left node coord
      msh%xe(2,i)=msh%x(2*i)             ! right node coord
-     msh%detJ(i) = msh%xe(2,i)-msh%xe(1,i)
+     msh%dx(i) = msh%xe(2,i)-msh%xe(1,i)
   enddo
   !
   allocate(msh%shp(msh%ngauss,msh%nshp))
@@ -79,7 +79,7 @@ subroutine init_mesh(msh,xlim,dx,iperiodic)
   do i = 1,msh%nshp
   do j = 1,msh%nshp
     do k = 1,msh%ngauss
-      msh%mass(1,i,j,ii) = msh%mass(1,i,j,ii) + msh%shp(k,i)*msh%shp(k,j)*msh%wgauss(k)*msh%detJ(ii)
+      msh%mass(1,i,j,ii) = msh%mass(1,i,j,ii) + msh%shp(k,i)*msh%shp(k,j)*msh%wgauss(k)*msh%dx(ii)
     enddo
   enddo
   enddo

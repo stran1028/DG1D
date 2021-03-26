@@ -14,13 +14,13 @@ program conservative_overset
   type(mesh), allocatable :: msh(:)
   allocate(msh(nmesh))
   !
-  ntime= 50
-  dt=0.02d0
+  ntime= 1000
+  dt=0.002d0
   !
   ! Set up the problem and bases types
   call set_type('linear_advection',1d0)
   !call set_type('burgers')
-  !call setshp('lagrange')
+!  call setshp('lagrange')
   call setshp('legendre')
   !
   ! Initialize the mesh(es)

@@ -19,28 +19,28 @@ subroutine timeIntegrate(msh,dt)
     dudt(1) = invM(1)*msh%rhs(1,1,i) + invM(2)*msh%rhs(1,2,i)
     dudt(2) = invM(3)*msh%rhs(1,1,i) + invM(4)*msh%rhs(1,2,i)
  
-    if(abs(i-50).lt.10) then 
-    write(*,*) 'Element ',i
-    write(*,*) '  mass = ',mass(1),mass(2),mass(3),mass(4)
-!    write(*,*) '  detJ = ',msh%detJ(i)
+!    if(abs(i-50).lt.10) then 
+!    write(*,*) 'Element ',i
+!    write(*,*) '  mass = ',mass(1),mass(2),mass(3),mass(4)
+!    write(*,*) '  dx = ',msh%dx(i)
 !    write(*,*) '  detM = ',detM
-    write(*,*) '  invM = ',invM
-    write(*,*) '  rhsV = ',msh%rhsv(:,:,i)   
-    write(*,*) '  rhsF = ',msh%rhsf(:,:,i)   
-    write(*,*) '  rhs = ',msh%rhs(:,:,i)   
-    write(*,*) '  q0 = ',msh%q(:,:,i) 
-    write(*,*) '  dudt = ',dudt
-    endif
+!    write(*,*) '  invM = ',invM
+!    write(*,*) '  rhsV = ',msh%rhsv(:,:,i)   
+!    write(*,*) '  rhsF = ',msh%rhsf(:,:,i)   
+!    write(*,*) '  rhs = ',msh%rhs(:,:,i)   
+!    write(*,*) '  q0 = ',msh%q(:,:,i) 
+!    write(*,*) '  dudt = ',dudt
+!    endif
 
    ! 1st order Euler in time
-    relax = 1.0
+    relax = 1.0d0
     msh%q(1,1,i) = msh%q(1,1,i) + relax*dudt(1)*dt
     msh%q(1,2,i) = msh%q(1,2,i) + relax*dudt(2)*dt
     
-    if(abs(i-50).lt.10) then 
+!    if(abs(i-50).lt.10) then 
     write(*,*) '  q1 = ',msh%q(:,:,i) 
     write(*,*) ' '
-    endif
+!    endif
 
   enddo
   !
