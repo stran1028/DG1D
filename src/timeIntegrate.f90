@@ -21,10 +21,10 @@ subroutine timeIntegrate(msh,dt)
  
     if(abs(i-50).lt.10) then 
     write(*,*) 'Element ',i
-!    write(*,*) '  mass = ',mass(1),mass(2),mass(3),mass(4)
+    write(*,*) '  mass = ',mass(1),mass(2),mass(3),mass(4)
 !    write(*,*) '  detJ = ',msh%detJ(i)
 !    write(*,*) '  detM = ',detM
-!    write(*,*) '  invM = ',invM
+    write(*,*) '  invM = ',invM
     write(*,*) '  rhsV = ',msh%rhsv(:,:,i)   
     write(*,*) '  rhsF = ',msh%rhsf(:,:,i)   
     write(*,*) '  rhs = ',msh%rhs(:,:,i)   
@@ -34,8 +34,8 @@ subroutine timeIntegrate(msh,dt)
 
    ! 1st order Euler in time
     relax = 1.0
-    msh%q(1,1,i) = msh%q(1,1,i) - relax*dudt(1)*dt
-    msh%q(1,2,i) = msh%q(1,2,i) - relax*dudt(2)*dt
+    msh%q(1,1,i) = msh%q(1,1,i) + relax*dudt(1)*dt
+    msh%q(1,2,i) = msh%q(1,2,i) + relax*dudt(2)*dt
     
     if(abs(i-50).lt.10) then 
     write(*,*) '  q1 = ',msh%q(:,:,i) 

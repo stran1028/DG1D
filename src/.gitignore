@@ -1,0 +1,7 @@
+*.o
+*.exe
+log
+aout*
+*.mod
+*.swp
+mesh.*

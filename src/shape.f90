@@ -25,7 +25,8 @@ contains
       ! Transform element to go from [-.5 .5]
       dx = xlim(2)-xlim(1)
       xc = 0.5d0*(xlim(2)+xlim(1))
-      zi = (x-xc)/dx
+      zi = (x-xc)/dx !<+ wrong
+      !write(*,*) 'x,dx,xc,zi',x,dx,xc,zi
       !
       qval = 0.0d0
       if(shptype.eq.'lagrange') then 
@@ -38,15 +39,15 @@ contains
       elseif(shptype.eq.'legendre') then 
         qval(1) = 1d0*q(1)
         dqval(1) = 0d0*q(1)
-        qval(2) = zi*q(2)
+        qval(2) = zi*q(2) 
         dqval(2) = 1d0*q(2)
+       ! write(*,*) 'qval = ',qval
+       ! write(*,*) 'dqval = ',dqval
 !        qval(3) = 0.5d0*(3d0*zi*zi-1d0) *q(3)
 !        dqval(3) = 3d0*zi*q(3)
         qout = qval(1:nshp)
         dqout = dqval(1:nshp)
       endif
-
-! Legendre polynomials on [-.5 .5[
 
     end subroutine shapefunction
 end module bases

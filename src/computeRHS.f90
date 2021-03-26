@@ -6,7 +6,7 @@ subroutine computeRHS(msh)
   !
   type(mesh), intent(inout) :: msh
   integer :: i,j,k,e1,e2
-  real*8 :: ql,qr,flx,qtmp,qvals(msh%nshp),dqvals(msh%nshp),vol
+  real*8 :: ql,qr,flx,qtmp,qvals(msh%nshp),dqvals(msh%nshp),vol,w(msh%nshp)
   integer, save :: iout=0
   !
   ! this is p0 implementation for
@@ -36,33 +36,37 @@ subroutine computeRHS(msh)
     e2=msh%face(2,i)
     !write(*,*) 'element i,e1,e2: ',i,e1,e2
     if (e1 .ne. e2) then
-        !if (e1==1 .or. e2 == 1) write(6,*) 'i=',i
-        !msh%rhs(:,1,e1)=msh%rhs(:,1,e1)+flx
-        !msh%rhs(:,1,e2)=msh%rhs(:,1,e2)-flx
 
-        ! Left flux boundary
+        ! Left flux boundary        
+        call shapefunction(msh%nshp,-0.5d0,[-0.5d0,0.5d0],[1d0,1d0],qvals,dqvals)
+        w = qvals
         call shapefunction(msh%nshp,msh%xe(2,e1),msh%xe(:,e1),msh%q(1,:,e1),qvals,dqvals)
         ql = sum(qvals)
         call shapefunction(msh%nshp,msh%xe(1,i),msh%xe(:,i),msh%q(1,:,i),qvals,dqvals)
         qr = sum(qvals)
         call flux(ql,qr,flx)
-        !write(*,*) '  l flux: ',ql,qr,flx
-        if (msh%iblank(msh%e2n(2,e1)) > 0) msh%rhs(:,1,i)=msh%rhs(:,1,i)+flx*msh%detJ(i)
-        if (msh%iblank(msh%e2n(2,e1)) > 0) msh%rhsf(:,1,i)=msh%rhsf(:,1,i)+flx*msh%detJ(i)
+        if (msh%iblank(msh%e2n(2,e1)) > 0) then 
+          do j = 1,msh%nshp
+            msh%rhs(:,j,i) = msh%rhs(:,j,i) + w(j)*flx*msh%detJ(i)
+            msh%rhsf(:,j,i) = msh%rhsf(:,j,i) + w(j)*flx*msh%detJ(i)
+          enddo
+        endif
         
         ! Right flux boundary
-!        ql = msh%q(1,msh%nshp,i)
-!        qr = msh%q(1,1,e2)
+        call shapefunction(msh%nshp,0.5d0,[-0.5d0,0.5d0],[1d0,1d0],qvals,dqvals)
+        w = qvals
         call shapefunction(msh%nshp,msh%xe(2,i),msh%xe(:,i),msh%q(1,:,i),qvals,dqvals)
         ql = sum(qvals)
         call shapefunction(msh%nshp,msh%xe(1,e2),msh%xe(:,e2),msh%q(1,:,e2),qvals,dqvals)
         qr = sum(qvals)
         call flux(ql,qr,flx)
-        !write(*,*) '  r flux: ',ql,qr,flx
-        if (msh%iblank(msh%e2n(1,e2)) > 0) msh%rhs(:,msh%nshp,i)=msh%rhs(:,msh%nshp,i)-flx*msh%detJ(i)
-        if (msh%iblank(msh%e2n(1,e2)) > 0) msh%rhsf(:,msh%nshp,i)=msh%rhsf(:,msh%nshp,i)-flx*msh%detJ(i)
+        if (msh%iblank(msh%e2n(1,e1)) > 0) then 
+          do j = 1,msh%nshp
+            msh%rhs(:,j,i) = msh%rhs(:,j,i) - w(j)*flx*msh%detJ(i)
+            msh%rhsf(:,j,i) = msh%rhsf(:,j,i) - w(j)*flx*msh%detJ(i)
+          enddo
+        endif
     endif
-    !! Need to do anything special for periodic? XXX
   enddo
   !
   !iout=iout+1
