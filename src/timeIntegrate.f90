@@ -38,8 +38,8 @@ subroutine timeIntegrate(msh,dt)
     msh%q(1,2,i) = msh%q(1,2,i) + relax*dudt(2)*dt
     
 !    if(abs(i-50).lt.10) then 
-    write(*,*) '  q1 = ',msh%q(:,:,i) 
-    write(*,*) ' '
+!    write(*,*) '  q1 = ',msh%q(:,:,i) 
+!    write(*,*) ' '
 !    endif
 
   enddo

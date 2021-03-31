@@ -75,6 +75,7 @@ contains
        write(6,*) 'problem type not implemented'
        call exit(1)
     else     
+       !q = 1d0
        q=exp(-20*x*x)
        if (abs(x) > 0.8d0) q=0d0
 !       q=exp(-0.01*x*x)

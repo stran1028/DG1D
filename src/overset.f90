@@ -1,6 +1,5 @@
 module overset
   use code_types
-  use bases
   use pde
 contains
   !
@@ -84,110 +83,220 @@ contains
     ! store info on the incomplete elems
     ! modified for DG, need both q endpts 
     ! and rhs vector
-    nrows = 3 + 2*msh%nshp
-    allocate(elemInfo(nrows*nincomp))
-    k=0
+!    nrows = 3 + 2*msh%nshp
+!    allocate(elemInfo(nrows*nincomp))
+    allocate(elemInfo(nincomp))
+!    k=0
+    k = 1
     do i=1,msh%nelem
        n1=msh%e2n(1,i)
        n2=msh%e2n(2,i)
        ib1=msh%iblank(n1)
        ib2=msh%iblank(n2)
        if ( ib1*ib2 .le. 0) then
-          elemInfo(nrows*k+1) = i
-          elemInfo(nrows*k+2) = msh%xe(1,i)
-          elemInfo(nrows*k+3) = msh%xe(2,i)
-          do j=4,3+msh%nshp
-            elemInfo(nrows*k+j) = msh%q(1,j-3,i)
-          enddo
-          do j=4+msh%nshp,3+2*msh%nshp
-            elemInfo(nrows*k+j) = msh%rhs(1,j-3-msh%nshp,i)
-          enddo
+          elemInfo(k) = i
+!          elemInfo(nrows*k+1) = i
+!          elemInfo(nrows*k+2) = msh%xe(1,i)
+!          elemInfo(nrows*k+3) = msh%xe(2,i)
+!          do j=4,3+msh%nshp
+!            elemInfo(nrows*k+j) = msh%q(1,j-3,i)
+!          enddo
+!          do j=4+msh%nshp,3+2*msh%nshp
+!            elemInfo(nrows*k+j) = msh%rhs(1,j-3-msh%nshp,i)
+!          enddo
           k=k+1
        endif
     enddo
     !
   end subroutine findIncompleteElements
   !
-  subroutine fixFluxIncompleteElements(msh,elemInfo,nincomp)
+  subroutine fixFluxIncompleteElements(mshB,mshA,elemInfo,nincomp)
+    use bases
+
     ! Subtract half of overlap section from mesh A (stored in elemInfo)
     implicit none
-    type(mesh), intent(in) :: msh
+    type(mesh), intent(inout) :: mshA,mshB
     integer, intent(in) :: nincomp
-    real*8, intent(inout) :: elemInfo((3+2*msh%nshp)*nincomp)
+    real*8, intent(inout) :: elemInfo(nincomp)
+!    real*8, intent(inout) :: elemInfo((3+2*msh%nshp)*nincomp)
     !
-    integer :: i,j,e,nrows,aa,bb
-    real*8 :: x1,x2,f1,f2,y1,y2,qA(msh%nshp),qB(msh%nshp)
-    real*8 :: dx,xs,qtmp(msh%nshp),dqtmp(msh%nshp),qs,vol,qval
+    integer :: i,j,e,nrows,aa,bb,cc,eid
+    real*8 :: x1,x2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp)
+    real*8 :: dx,dzi,xs,qtmp(mshA%nshp),dqtmp(mshA%nshp),qs,vol,qval
+    real*8 :: temp(2),xg,qLA,qlB,w(mshA%nshp),zis
+
+!! Do I need all of these elemInfo arrays? Don't I just need i_incomp? It's
+!! confusing this way
     !
     ! elemInfo = incomplete elements on mesh A
     ! msh = mesh info of mesh B
     !
-    nrows = 3 + 2*msh%nshp              
-    iloop: do i=1,nincomp       ! Loop through incomplete elem of mesh A
-       x1=elemInfo(nrows*(i-1)+1)
-       x2=elemInfo(nrows*(i-1)+2)
-       qA=elemInfo(4:3+msh%nshp) ! verify indices XXX
-       eloop: do j=1,msh%nelem  ! Loop through all elem of mesh B
-          y1=msh%xe(1,j)
-          y2=msh%xe(2,j)
+!    nrows = 3 + 2*msh%nshp              
+     iloop: do i=1,nincomp       ! Loop through incomplete elem of mesh A
+       write(*,*) 'ST DEBUG eINFO = ',elemInfo
+       eid = elemInfo(i)
+       x1=mshA%xe(1,eid) !elemInfo(nrows*(i-1)+2) 
+       x2=mshA%xe(2,eid) !elemInfo(nrows*(i-1)+3)
+       qA=mshA%q(1,:,eid) !elemInfo(nrows*(i-1)+4:nrows*(i-1)+3+msh%nshp)! 
+       eloop: do j=1,mshB%nelem  ! Loop through all elem of mesh B
+          y1=mshB%xe(1,j)
+          y2=mshB%xe(2,j)
           if (x1 > y2 .or. x2 < y1) then ! skip if not overlapping
              cycle eloop
           else
-	     if (msh%iblank(msh%e2n(1,j)) .ne.1 .and. &
-                 msh%iblank(msh%e2n(2,j)) .ne.1) cycle eloop ! skip if incomplete mesh B elem
-             qB=msh%q(1,:,j)
+	     if (mshB%iblank(mshB%e2n(1,j)) .ne.1 .and. &
+                 mshB%iblank(mshB%e2n(2,j)) .ne.1) cycle eloop ! skip if incomplete mesh B elem
+             qB=mshB%q(1,:,j)
+
              if ((x1-y1)*(x1-y2) .le. 0.0) then ! L node of mesh A is inside of mesh B elem
                ! Get the middle point of the overlap
                ! Overlap is between x1 and y2
                xs = 0.5*(x1+y2) ! overlap split point
-               dx = abs(x1-xs)  ! subtracting half of the oberlap
-               call shapefunction(msh%nshp,xs,[x1, x2],qA,qtmp,dqtmp)
-               qs = SUM(qtmp)              
+               dx = abs(x1-xs)  ! half length of the overlap
+               call shapefunction(mshA%nshp,xs,[x1,x2],qA,qtmp,dqtmp)
+               qs = SUM(qtmp)
+!               dzi = dx/mshA%dx(eid)
 
-               ! Calculate the volume integral in overlap element
-               do aa = 1,msh%ngauss
-                 call shapefunction(msh%nshp,msh%xgauss(j),[x1,xs],[qA(1),qs],qtmp,dqtmp)
-                 qval = SUM(qtmp)
-                 do bb = 1,msh%nshp
-                    vol = 0d0
-                    call volint(qval,vol)
-                    vol = vol*msh%dshp(aa,bb)*dx*msh%wgauss(aa)
-                    elemInfo(3+msh%nshp+bb) = elemInfo(3+msh%nshp+bb) + vol 
+               ! Adjust mass matrix
+               write(*,*) 'L node before:',eid,xs,x2
+               write(*,*) '  mass 1 = ',mshA%mass(1,:,:,eid) 
+               do aa = 1,mshA%ngauss
+                 xg = (mshA%xgauss(aa)+0.5d0)*dx + x1
+                 call shapefunction(mshA%nshp,xg,[x1,y2],[1d0,1d0],qtmp,dqtmp)
+                 write(*,*) 'Na = ',qtmp
+                 do bb=1,mshA%nshp
+                 do cc=1,mshA%nshp
+                   mshA%mass(1,bb,cc,eid) = mshA%mass(1,bb,cc,eid) - qtmp(bb)*qtmp(cc)*dx*mshA%wgauss(aa)
+                 enddo
                  enddo
                enddo
+               write(*,*) '  mass 2 = ', mshA%mass(1,:,:,eid)
+ 
+               ! Calculate the volume integral in overlap element
+               write(*,*) '  rhs 1 = ',mshA%rhs(1,:,eid) 
+               temp = 0d0
+               do aa = 1,mshA%ngauss
+                 qtmp = 0.0
+                 ! wrong! xgauss and x1,xs have to match up. need to transform
+                 ! xgauss or vice versa
+                 xg = (mshA%xgauss(aa)+0.5)*dx + x1
+                 call shapefunction(mshA%nshp,xg,[x1,xs],[qA(1),qs],qtmp,dqtmp)
+                 qval = SUM(qtmp)
+                 write(*,*) 'xgauss,dx,x1,xg,qval = ',mshA%xgauss(aa),x1,dx,xg,qval
+                 do bb = 1,mshA%nshp
+                    call volint(qval,vol)
+                    vol = vol*mshA%dshp(aa,bb)*mshA%wgauss(aa)
+                    temp(bb) = temp(bb) + vol
+                    mshA%rhs(1,bb,eid) = mshA%rhs(1,bb,eid) - vol 
+                    !elemInfo(3+mshA%nshp+bb) = elemInfo(3+mshA%nshp+bb) + vol 
+                 enddo
+               enddo
+               write(*,*) '  rhs 2 = ',mshA%rhs(1,:,eid) 
+!               write(*,*) '  dvol = ',temp
 
                ! Calculate flux vector in overlap element
                ! Subtract from left side of mesh A element
-               call flux(qA(1),qA(1),f1)
+
+               call shapefunction(mshA%nshp,x1,[x1, y2],qA,qtmp,dqtmp)
+               qLA = SUM(qtmp) ! q value at l node of subset on mesh A
+               call shapefunction(mshB%nshp,x1,[y1, y2],qB,qtmp,dqtmp)
+               qLB = SUM(qtmp) ! q value at l node of subset on mesh A
+               call shapefunction(mshA%nshp,xs,[x1, y2],qA,qtmp,dqtmp)
+               qs = SUM(qtmp)              
+
+               xs = 0.5*(x1+y2) ! overlap split point
+               zis =-0.5 + (xs-x1)/(x2-x1)
+               call shapefunction(mshA%nshp,zis,[-0.5d0,0.5d0],[1d0,1d0],w,dqtmp)
                call flux(qs,qs,f2)
-               elemInfo(4+msh%nshp) = elemInfo(4+msh%nshp) - (f2-f1) 
+               do aa = 1,mshA%nshp             
+                 mshA%rhs(1,aa,eid) = mshA%rhs(1,aa,eid) - w(aa)*f2 ! XX think this formulation is wrong; w is not = to 1,0 here!
+               enddo
+                
+               write(*,*) '  w2*f = ',zis,w(:)*f2   ! wrong
+               call shapefunction(mshA%nshp,-0.5d0,[-0.5d0,0.5d0],[1d0,1d0],w,dqtmp)
+               call flux(qLB,qLA,f1)
+               do aa = 1,mshA%nshp             
+                 mshA%rhs(1,aa,eid) = mshA%rhs(1,aa,eid) + w(aa)*f1 ! XX think this formulation is wrong; w is not = to 1,0 here!
+               enddo
+               write(*,*) '  w1*f = ',w(:)*f1    ! wrong
+
+!elemInfo(4+mshA%nshp) = elemInfo(4+msh%nshp) - (f2-f1) 
+               write(*,*) '  rhs 3 = ',mshA%rhs(1,:,eid) 
+               write(*,*) '  df = ',f2-f1
+                 write(*,*) ' ' 
+                 write(*,*) ' L Side'
+                 write(*,*) '  i,j =',i,j
+                 write(*,*) '  xs,dx = ',xs,dx
+                 write(*,*) '  x1,x2 = ',x1,x2
+                 write(*,*) '  y1,y2 = ',y1,y2
+                 write(*,*) '  f1,f2 = ',f1,f2
+                 write(*,*) '  qval = ',qval    
+                 write(*,*) '  qLA,qLB = ',qLA,qLB
+                 write(*,*) '  qA = ',qA(1),qA(2)
+                 write(*,*) '  qB = ',qB(1),qB(2)
+                 write(*,*) '  vol = ',temp(1),temp(2)
+                 write(*,*) '  f1,f2 = ', f1,f2
+                 write(*,*) ' '
 
                cycle iloop
              endif
              if ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem
                ! overlap is between y1 and x2
                xs = 0.5*(y1+x2) ! overlap split point
-               dx = abs(y1-xs)  ! subtracting half of the oberlap
-               call shapefunction(msh%nshp,xs,[x1, x2],qA,qtmp,dqtmp)
+               dx = abs(y1-xs)  ! subtracting half of the overlap
+               call shapefunction(mshA%nshp,xs,[y1, x2],qA,qtmp,dqtmp)
                qs = SUM(qtmp)             
 
-               ! Calculate the volume integral in overlap element
-               do aa = 1,msh%ngauss
-                 call shapefunction(msh%nshp,msh%xgauss(j),[xs,x2],[qs,qA(msh%nshp)],qtmp,dqtmp)
-                 qval = SUM(qtmp)
-                 do bb = 1,msh%nshp
-                    vol = 0d0
-                    call volint(qval,vol)
-                    vol = vol*msh%dshp(aa,bb)*dx*msh%wgauss(aa)
-                    elemInfo(3+msh%nshp+bb) = elemInfo(3+msh%nshp+bb) + vol
+               ! Adjust mass matrix
+               write(*,*) 'R node before:',eid,xs,x2
+               write(*,*) '  mass 1 = ',mshA%mass(1,:,:,eid) 
+               do aa = 1,mshA%ngauss
+                 xg = (mshA%xgauss(aa)+0.5)*dx + xs
+                 call shapefunction(mshA%nshp,xg,[xs,x2],[1d0,1d0],qtmp,dqtmp)
+                 do bb=1,mshA%nshp
+                 do cc=1,mshA%nshp
+!                   mshA%mass(1,bb,cc,eid) = mshA%mass(1,bb,cc,eid) - qtmp(bb)*qtmp(cc)*dx*mshA%wgauss(aa)
+                 enddo
                  enddo
                enddo
+               write(*,*) '  mass 1 = ',mshA%mass(1,:,:,eid) 
+
+               ! Calculate the volume integral in overlap elemen
+               write(*,*) '  rhs 1 = ',mshA%rhs(1,:,eid) 
+               temp = 0d0
+               do aa = 1,mshA%ngauss
+                 xg = (mshA%xgauss(aa)+0.5)*dx + xs
+                 call shapefunction(mshA%nshp,xg,[xs,x2],[qs,qA(mshA%nshp)],qtmp,dqtmp)
+                 qval = SUM(qtmp)
+                 do bb = 1,mshA%nshp
+                    call volint(qval,vol)
+                    vol = vol*mshA%dshp(aa,bb)*mshA%wgauss(aa)
+                    temp(bb) = temp(bb)+vol
+                    mshA%rhs(1,bb,eid) = mshA%rhs(1,bb,eid) - vol
+!                    elemInfo(3+mshA%nshp+bb) = elemInfo(3+mshA%nshp+bb) + vol
+                 enddo
+               enddo
+               write(*,*) '  rhs 2 = ',mshA%rhs(1,:,eid) 
 
                ! Calculate flux vector in overlap element
                ! Subtract from right side of mesh A element
-               call flux(qA(msh%nshp),qA(msh%nshp),f1)
+               call flux(qA(mshA%nshp),qA(mshA%nshp),f1)
                call flux(qs,qs,f2)
-               elemInfo(3+2*msh%nshp) = elemInfo(3+2*msh%nshp) - (f2-f1)
+               mshA%rhs(1,mshA%nshp,eid) = mshA%rhs(1,mshA%nshp,eid) + (f2-f1)
+!               elemInfo(3+2*mshA%nshp) = elemInfo(3+2*mshA%nshp) - (f2-f1)
+               write(*,*) '  rhs 3 = ',mshA%rhs(1,:,eid)
+ 
+                 write(*,*) ' R Side'
+                 write(*,*) '  i,j =',i,j
+                 write(*,*) '  xs,dx = ',xs,dx
+                 write(*,*) '  x1,x2 = ',x1,x2
+                 write(*,*) '  y1,y2 = ',y1,y2
+                 write(*,*) '  qtmp = ',qtmp
+                 write(*,*) '  qA = ',qA(1),qA(2)
+                 write(*,*) '  qB = ',qB(1),qB(2)
+                 write(*,*) '  vol = ',temp(1),temp(2)
+                 write(*,*) '  f1,f2 = ', f1,f2
+                 write(*,*) ' '
 
                cycle iloop
              endif
@@ -212,13 +321,12 @@ contains
        e=nint(elemInfo(nrows*(i-1)+1))
        x1=elemInfo(nrows*(i-1)+2)
        x2=elemInfo(nrows*(i-1)+3)
-       res=elemInfo(4+msh%nshp:3+2*msh%nshp)
        !write(6,*) 'e,x1,x2=',e,x1,x2,msh%rhs(1,1,e)
        !write(6,*) 'msh%xe=',msh%xe(:,e)
        !write(6,*) 'r1:',msh%rhs(1,1,e)
        msh%xe(1,e)=x1
        msh%xe(2,e)=x2
-       msh%rhs(1,:,e)=res
+       msh%rhs(1,:,e)=elemInfo(4+msh%nshp:3+2*msh%nshp)
        !write(6,*) 'r2:',msh%rhs(1,1,e)
        !write(6,*) 'e,x1,x2=',e,x1,x2,msh%rhs(1,1,e)
     enddo
