@@ -57,7 +57,7 @@ call init_mesh(msh(1),[0d0,6.28318530717959d0],0.314159265358979d0,1)
    write(*,*) '==================='
    write(*,*) 'Step ',i
    write(*,*) '==================='
-
+   
    ! RK step 1
    write(*,*) 'q0 = ', msh(1)%q(1,:,10)
    write(*,*) ' '
@@ -86,6 +86,7 @@ call init_mesh(msh(1),[0d0,6.28318530717959d0],0.314159265358979d0,1)
    call timestep(nmesh,dt,msh)
    do j = 1,nmesh
      msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
+     msh(j)%q = msh(j)%sol
    enddo
    write(*,*) 'dq3 = ', msh(1)%dq(1,:,10)
    write(*,*) 'q3 = ', msh(1)%q(1,:,10)
