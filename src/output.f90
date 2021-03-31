@@ -19,9 +19,9 @@ subroutine output(iout,msh)
     if (msh%iblank(msh%e2n(1,i)) == 1 .or. &
         msh%iblank(msh%e2n(2,i)) == 1) then 
         
-       call shapefunction(msh%nshp,msh%xe(1,i),[msh%xe(1,i),msh%xe(2,i)],msh%q(1,:,i),qout,dqout)
+       call shapefunction(msh%nshp,msh%xe(1,i),[msh%xe(1,i),msh%xe(2,i)],msh%sol(1,:,i),qout,dqout)
        q1 = sum(qout)
-       call shapefunction(msh%nshp,msh%xe(2,i),[msh%xe(1,i),msh%xe(2,i)],msh%q(1,:,i),qout,dqout)
+       call shapefunction(msh%nshp,msh%xe(2,i),[msh%xe(1,i),msh%xe(2,i)],msh%sol(1,:,i),qout,dqout)
        q2 = sum(qout)
 
        write(11,*) 0.5*(msh%xe(1,i)+msh%xe(2,i)),&

@@ -122,8 +122,12 @@ contains
     !
     integer :: i,j,e,nrows,aa,bb,cc,eid
     real*8 :: x1,x2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp)
-    real*8 :: dx,dzi,xs,qtmp(mshA%nshp),dqtmp(mshA%nshp),qs,vol,qval
-    real*8 :: temp(2),xg,qLA,qlB,w(mshA%nshp),zis
+    real*8 :: xcut(2),xc,lcut,xg
+    real*8 :: qtmp(mshA%nshp),dqtmp(mshA%nshp)
+    real*8 :: dmass(mshA%nshp,mshA%nshp)        ! debug vars
+!    real*8 :: dx,dzi,xs,qtmp(mshA%nshp),dqtmp(mshA%nshp),qs,vol,qval
+!    real*8 :: temp(2),xg,qLA,qlB,w(mshA%nshp),zis
+!    real*8 :: dmass(2,2)
 
 !! Do I need all of these elemInfo arrays? Don't I just need i_incomp? It's
 !! confusing this way
@@ -149,155 +153,65 @@ contains
              qB=mshB%q(1,:,j)
 
              if ((x1-y1)*(x1-y2) .le. 0.0) then ! L node of mesh A is inside of mesh B elem
-               ! Get the middle point of the overlap
                ! Overlap is between x1 and y2
-               xs = 0.5*(x1+y2) ! overlap split point
-               dx = abs(x1-xs)  ! half length of the overlap
-               call shapefunction(mshA%nshp,xs,[x1,x2],qA,qtmp,dqtmp)
-               qs = SUM(qtmp)
-!               dzi = dx/mshA%dx(eid)
-
+               ! mshA will remove first half of overlap (from x1 to 0.5*(x1+y2))
+               xcut = [x1,0.5d0*(x1+y2)]
+               lcut = xcut(2)-xcut(1)
+               xc = 0.5*(xcut(1)+xcut(2))   ! center of section to be removed
+!               write(*,*) 'y1,y2: ',y1,y2
+!               write(*,*) 'x1,x2: ',x1,x2
+!              write(*,*) 'xcut,lcut,xc: ',xcut,lcut,xc
+               
                ! Adjust mass matrix
-               write(*,*) 'L node before:',eid,xs,x2
-               write(*,*) '  mass 1 = ',mshA%mass(1,:,:,eid) 
+               write(*,*) 'L node before:'
+               write(*,*) '  mass 1 = ',mshA%mass(1,:,:,eid)
+
+               dmass = 0d0
                do aa = 1,mshA%ngauss
-                 xg = (mshA%xgauss(aa)+0.5d0)*dx + x1
-                 call shapefunction(mshA%nshp,xg,[x1,y2],[1d0,1d0],qtmp,dqtmp)
-                 write(*,*) 'Na = ',qtmp
-                 do bb=1,mshA%nshp
-                 do cc=1,mshA%nshp
-                   mshA%mass(1,bb,cc,eid) = mshA%mass(1,bb,cc,eid) - qtmp(bb)*qtmp(cc)*dx*mshA%wgauss(aa)
-                 enddo
-                 enddo
-               enddo
-               write(*,*) '  mass 2 = ', mshA%mass(1,:,:,eid)
- 
-               ! Calculate the volume integral in overlap element
-               write(*,*) '  rhs 1 = ',mshA%rhs(1,:,eid) 
-               temp = 0d0
-               do aa = 1,mshA%ngauss
-                 qtmp = 0.0
-                 ! wrong! xgauss and x1,xs have to match up. need to transform
-                 ! xgauss or vice versa
-                 xg = (mshA%xgauss(aa)+0.5)*dx + x1
-                 call shapefunction(mshA%nshp,xg,[x1,xs],[qA(1),qs],qtmp,dqtmp)
-                 qval = SUM(qtmp)
-                 write(*,*) 'xgauss,dx,x1,xg,qval = ',mshA%xgauss(aa),x1,dx,xg,qval
+                 ! get shapefunction from msh A at quad pts of cut section
+                 xg = mshA%xgauss(aa)*lcut+xc
+                 call shapefunction(mshA%nshp,xg,[x1,x2],[1d0,1d0],qtmp,dqtmp)
+                 write(*,*) '  xg,qtmp: ',xg,qtmp
                  do bb = 1,mshA%nshp
-                    call volint(qval,vol)
-                    vol = vol*mshA%dshp(aa,bb)*mshA%wgauss(aa)
-                    temp(bb) = temp(bb) + vol
-                    mshA%rhs(1,bb,eid) = mshA%rhs(1,bb,eid) - vol 
-                    !elemInfo(3+mshA%nshp+bb) = elemInfo(3+mshA%nshp+bb) + vol 
-                 enddo
-               enddo
-               write(*,*) '  rhs 2 = ',mshA%rhs(1,:,eid) 
-!               write(*,*) '  dvol = ',temp
+                   do cc = 1,mshA%nshp
+                      dmass(bb,cc) = dmass(bb,cc) + qtmp(bb)*qtmp(cc)*mshA%wgauss(aa)*lcut
 
-               ! Calculate flux vector in overlap element
-               ! Subtract from left side of mesh A element
+                   enddo ! nshp
+                 enddo ! nshp
+               enddo ! ngauss
+               write(*,*) ' dmass = ',dmass
 
-               call shapefunction(mshA%nshp,x1,[x1, y2],qA,qtmp,dqtmp)
-               qLA = SUM(qtmp) ! q value at l node of subset on mesh A
-               call shapefunction(mshB%nshp,x1,[y1, y2],qB,qtmp,dqtmp)
-               qLB = SUM(qtmp) ! q value at l node of subset on mesh A
-               call shapefunction(mshA%nshp,xs,[x1, y2],qA,qtmp,dqtmp)
-               qs = SUM(qtmp)              
 
-               xs = 0.5*(x1+y2) ! overlap split point
-               zis =-0.5 + (xs-x1)/(x2-x1)
-               call shapefunction(mshA%nshp,zis,[-0.5d0,0.5d0],[1d0,1d0],w,dqtmp)
-               call flux(qs,qs,f2)
-               do aa = 1,mshA%nshp             
-                 mshA%rhs(1,aa,eid) = mshA%rhs(1,aa,eid) - w(aa)*f2 ! XX think this formulation is wrong; w is not = to 1,0 here!
-               enddo
-                
-               write(*,*) '  w2*f = ',zis,w(:)*f2   ! wrong
-               call shapefunction(mshA%nshp,-0.5d0,[-0.5d0,0.5d0],[1d0,1d0],w,dqtmp)
-               call flux(qLB,qLA,f1)
-               do aa = 1,mshA%nshp             
-                 mshA%rhs(1,aa,eid) = mshA%rhs(1,aa,eid) + w(aa)*f1 ! XX think this formulation is wrong; w is not = to 1,0 here!
-               enddo
-               write(*,*) '  w1*f = ',w(:)*f1    ! wrong
 
-!elemInfo(4+mshA%nshp) = elemInfo(4+msh%nshp) - (f2-f1) 
-               write(*,*) '  rhs 3 = ',mshA%rhs(1,:,eid) 
-               write(*,*) '  df = ',f2-f1
-                 write(*,*) ' ' 
-                 write(*,*) ' L Side'
-                 write(*,*) '  i,j =',i,j
-                 write(*,*) '  xs,dx = ',xs,dx
-                 write(*,*) '  x1,x2 = ',x1,x2
-                 write(*,*) '  y1,y2 = ',y1,y2
-                 write(*,*) '  f1,f2 = ',f1,f2
-                 write(*,*) '  qval = ',qval    
-                 write(*,*) '  qLA,qLB = ',qLA,qLB
-                 write(*,*) '  qA = ',qA(1),qA(2)
-                 write(*,*) '  qB = ',qB(1),qB(2)
-                 write(*,*) '  vol = ',temp(1),temp(2)
-                 write(*,*) '  f1,f2 = ', f1,f2
-                 write(*,*) ' '
 
+
+
+
+
+!               dmass = 0d0 
+!               do aa = 1,mshA%ngauss
+!                 ! transform xgauss onto the sub element
+!                 xg = mshA%xgauss(aa)*(y2-x1)+xs
+!
+!                 call shapefunction(mshA%nshp,xg,[-.5d0,.5d0],[1d0,1d0],qtmp,dqtmp)
+!                 write(*,*) 'xg, Na = ',(xs-x1)/(x2-x1),xg,qtmp
+!!                 xg = (mshA%xgauss(aa)+0.5d0)*(y2-x1) + x1              
+!!                 call shapefunction(mshA%nshp,xg,[x1,x2],[1d0,1d0],qtmp,dqtmp)
+!!                 write(*,*) 'xg, Na = ',x1,y2,mshA%xgauss(aa)+0.5d0,xg,qtmp
+!                 do bb=1,mshA%nshp
+!                 do cc=1,mshA%nshp
+!                   dmass(bb,cc) = dmass(bb,cc)-qtmp(bb)*qtmp(cc)*mshA%wgauss(aa)
+!                   mshA%mass(1,bb,cc,eid) = mshA%mass(1,bb,cc,eid) - qtmp(bb)*qtmp(cc)*mshA%wgauss(aa)
+!                 enddo
+!                 enddo
+!               enddo
+!               write(*,*) '  dmass = ', dmass
+!               write(*,*) '  mass 2 = ', mshA%mass(1,:,:,eid)
+ 
                cycle iloop
              endif
              if ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem
-               ! overlap is between y1 and x2
-               xs = 0.5*(y1+x2) ! overlap split point
-               dx = abs(y1-xs)  ! subtracting half of the overlap
-               call shapefunction(mshA%nshp,xs,[y1, x2],qA,qtmp,dqtmp)
-               qs = SUM(qtmp)             
-
-               ! Adjust mass matrix
-               write(*,*) 'R node before:',eid,xs,x2
-               write(*,*) '  mass 1 = ',mshA%mass(1,:,:,eid) 
-               do aa = 1,mshA%ngauss
-                 xg = (mshA%xgauss(aa)+0.5)*dx + xs
-                 call shapefunction(mshA%nshp,xg,[xs,x2],[1d0,1d0],qtmp,dqtmp)
-                 do bb=1,mshA%nshp
-                 do cc=1,mshA%nshp
-!                   mshA%mass(1,bb,cc,eid) = mshA%mass(1,bb,cc,eid) - qtmp(bb)*qtmp(cc)*dx*mshA%wgauss(aa)
-                 enddo
-                 enddo
-               enddo
-               write(*,*) '  mass 1 = ',mshA%mass(1,:,:,eid) 
-
-               ! Calculate the volume integral in overlap elemen
-               write(*,*) '  rhs 1 = ',mshA%rhs(1,:,eid) 
-               temp = 0d0
-               do aa = 1,mshA%ngauss
-                 xg = (mshA%xgauss(aa)+0.5)*dx + xs
-                 call shapefunction(mshA%nshp,xg,[xs,x2],[qs,qA(mshA%nshp)],qtmp,dqtmp)
-                 qval = SUM(qtmp)
-                 do bb = 1,mshA%nshp
-                    call volint(qval,vol)
-                    vol = vol*mshA%dshp(aa,bb)*mshA%wgauss(aa)
-                    temp(bb) = temp(bb)+vol
-                    mshA%rhs(1,bb,eid) = mshA%rhs(1,bb,eid) - vol
-!                    elemInfo(3+mshA%nshp+bb) = elemInfo(3+mshA%nshp+bb) + vol
-                 enddo
-               enddo
-               write(*,*) '  rhs 2 = ',mshA%rhs(1,:,eid) 
-
-               ! Calculate flux vector in overlap element
-               ! Subtract from right side of mesh A element
-               call flux(qA(mshA%nshp),qA(mshA%nshp),f1)
-               call flux(qs,qs,f2)
-               mshA%rhs(1,mshA%nshp,eid) = mshA%rhs(1,mshA%nshp,eid) + (f2-f1)
-!               elemInfo(3+2*mshA%nshp) = elemInfo(3+2*mshA%nshp) - (f2-f1)
-               write(*,*) '  rhs 3 = ',mshA%rhs(1,:,eid)
- 
-                 write(*,*) ' R Side'
-                 write(*,*) '  i,j =',i,j
-                 write(*,*) '  xs,dx = ',xs,dx
-                 write(*,*) '  x1,x2 = ',x1,x2
-                 write(*,*) '  y1,y2 = ',y1,y2
-                 write(*,*) '  qtmp = ',qtmp
-                 write(*,*) '  qA = ',qA(1),qA(2)
-                 write(*,*) '  qB = ',qB(1),qB(2)
-                 write(*,*) '  vol = ',temp(1),temp(2)
-                 write(*,*) '  f1,f2 = ', f1,f2
-                 write(*,*) ' '
-
+               write(*,*) ' Rside not coded right now'
                cycle iloop
              endif
           endif

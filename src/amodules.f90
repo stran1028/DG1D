@@ -13,7 +13,9 @@ module code_types
      integer, allocatable :: face(:,:) !< element end-faces
      integer, allocatable :: iblank(:) !< iblank for end-nodes
      !
-     real*8, allocatable :: q(:,:,:)   !< q-variables (nfields,nshp,nelem)
+     real*8, allocatable :: dq(:,:,:)   !< q-variables (nfields,nshp,nelem)
+     real*8, allocatable :: q(:,:,:)   !< intermediate q-variables (nfields,nshp,nelem)
+     real*8, allocatable :: sol(:,:,:)   !< final q-variables (nfields,nshp,nelem)
      real*8, allocatable :: x(:)       !< end-node coords
      real*8, allocatable :: xe(:,:)    !< element end coords
      real*8, allocatable :: nres(:)    !< nodal resolution for overset

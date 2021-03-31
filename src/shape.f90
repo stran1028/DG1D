@@ -25,8 +25,8 @@ contains
       ! Transform element to go from [-.5 .5]
       dx = xlim(2)-xlim(1)
       xc = 0.5d0*(xlim(2)+xlim(1))
-      zi = (x-xc)/dx !<+ wrong
-      !write(*,*) 'x,dx,xc,zi',x,dx,xc,zi
+      zi = (x-xc)/dx 
+!      write(*,*) 'shape: x,dx,xc,zi',x,dx,xc,zi
       !
       qval = 0.0d0
       if(shptype.eq.'lagrange') then 

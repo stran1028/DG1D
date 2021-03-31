@@ -65,7 +65,9 @@ subroutine init_mesh(msh,xlim,dx,iperiodic)
      msh%face(2,msh%nelem)=1
   endif
   !
+  allocate(msh%dq(msh%nfields,msh%nshp,msh%nelem))
   allocate(msh%q(msh%nfields,msh%nshp,msh%nelem))
+  allocate(msh%sol(msh%nfields,msh%nshp,msh%nelem))
   allocate(msh%rhs(msh%nfields,msh%nshp,msh%nelem))
   allocate(msh%rhsv(msh%nfields,msh%nshp,msh%nelem))
   allocate(msh%rhsf(msh%nfields,msh%nshp,msh%nelem))

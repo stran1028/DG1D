@@ -22,6 +22,7 @@ subroutine initvar(msh)
         endif
      enddo
   enddo
+  msh%sol = msh%q
   !
 end subroutine initvar
         
