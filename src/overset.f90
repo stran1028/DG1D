@@ -156,17 +156,23 @@ contains
              if ((x1-y1)*(x1-y2) .le. 0.0) then ! L node of mesh A is inside of mesh B elem
                ! Overlap is between x1 and y2
                ! mshA will remove first half of overlap (from x1 to 0.5*(x1+y2))
+               write(*,*) ' '
+               write(*,*) 'L node'
                xcut = [x1,0.5d0*(x1+y2)]
-               lcut = xcut(2)-xcut(1)
-               xc = 0.5*(xcut(1)+xcut(2))   ! center of section to be removed
-             elseif ((x2-y1)*(x2-y2) .le. 0.0) then
+             elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R ndoe of mesh A is inside of mesh B elem          
+               ! Overlap is between y1 and x2
+               ! msh A will remove second half of overlap (from 0.5(y1+x2) to x2
+               write(*,*) ' '
+               write(*,*) 'R node'
+               xcut = [0.5d0*(y1+x2),x2]
              endif
-             write(*,*) 'y1,y2: ',y1,y2
-             write(*,*) 'x1,x2: ',x1,x2
-             write(*,*) 'xcut,lcut,xc: ',xcut,lcut,xc
+             lcut = xcut(2)-xcut(1)
+             xc = 0.5*(xcut(1)+xcut(2))   ! center of section to be removed
+             write(*,*) '  y1,y2: ',y1,y2
+             write(*,*) '  x1,x2: ',x1,x2
+             write(*,*) '  xcut,lcut,xc: ',xcut,lcut,xc
                
              ! Adjust mass matrix and volume integral
-             write(*,*) 'L node before:'
              write(*,*) '  mass 1 = ',mshA%mass(1,:,:,eid)
              write(*,*) '  rhs 1 = ',mshA%rhs(1,:,eid)
              dmass = 0d0
