@@ -123,9 +123,10 @@ contains
     integer :: i,j,e,nrows,aa,bb,cc,eid
     real*8 :: x1,x2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp)
     real*8 :: xcut(2),xc,lcut,xg
+    real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp)
     real*8 :: qtmp(mshA%nshp),dqtmp(mshA%nshp)
     real*8 :: dmass(mshA%nshp,mshA%nshp)        ! debug vars
-!    real*8 :: dx,dzi,xs,qtmp(mshA%nshp),dqtmp(mshA%nshp),qs,vol,qval
+!    real*8 :: dx,dzi,xs,wtmp(mshA%nshp),dwtmp(mshA%nshp),qs,vol,qval
 !    real*8 :: temp(2),xg,qLA,qlB,w(mshA%nshp),zis
 !    real*8 :: dmass(2,2)
 
@@ -158,62 +159,57 @@ contains
                xcut = [x1,0.5d0*(x1+y2)]
                lcut = xcut(2)-xcut(1)
                xc = 0.5*(xcut(1)+xcut(2))   ! center of section to be removed
-!               write(*,*) 'y1,y2: ',y1,y2
-!               write(*,*) 'x1,x2: ',x1,x2
-!              write(*,*) 'xcut,lcut,xc: ',xcut,lcut,xc
+             elseif ((x2-y1)*(x2-y2) .le. 0.0) then
+             endif
+             write(*,*) 'y1,y2: ',y1,y2
+             write(*,*) 'x1,x2: ',x1,x2
+             write(*,*) 'xcut,lcut,xc: ',xcut,lcut,xc
                
-               ! Adjust mass matrix
-               write(*,*) 'L node before:'
-               write(*,*) '  mass 1 = ',mshA%mass(1,:,:,eid)
+             ! Adjust mass matrix and volume integral
+             write(*,*) 'L node before:'
+             write(*,*) '  mass 1 = ',mshA%mass(1,:,:,eid)
+             write(*,*) '  rhs 1 = ',mshA%rhs(1,:,eid)
+             dmass = 0d0
+             do aa = 1,mshA%ngauss
+               ! get shapefunction from msh A at quad pts of cut section
+               xg = mshA%xgauss(aa)*lcut+xc
+               call shapefunction(mshA%nshp,xg,[x1,x2],[1d0,1d0],wtmp,dwtmp)
+               call shapefunction(mshA%nshp,xg,[x1,x2],qA,qtmp,dqtmp)
+               write(*,*) '  xg,wtmp: ',xg,wtmp
+               do bb = 1,mshA%nshp
+                 ! Volume Integral
+                 mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) -dwtmp(bb)*sum(qtmp)*mshA%wgauss(aa)*lcut/mshA%dx(eid) ! scale integral by cut length in parent element
 
-               dmass = 0d0
-               do aa = 1,mshA%ngauss
-                 ! get shapefunction from msh A at quad pts of cut section
-                 xg = mshA%xgauss(aa)*lcut+xc
-                 call shapefunction(mshA%nshp,xg,[x1,x2],[1d0,1d0],qtmp,dqtmp)
-                 write(*,*) '  xg,qtmp: ',xg,qtmp
-                 do bb = 1,mshA%nshp
-                   do cc = 1,mshA%nshp
-                      dmass(bb,cc) = dmass(bb,cc) + qtmp(bb)*qtmp(cc)*mshA%wgauss(aa)*lcut
-
-                   enddo ! nshp
+                 do cc = 1,mshA%nshp
+                    ! Mass matrix
+                    dmass(bb,cc) = dmass(bb,cc) + wtmp(bb)*wtmp(cc)*mshA%wgauss(aa)*lcut
+                    mshA%mass(:,bb,cc,eid) = mshA%mass(:,bb,cc,eid) - wtmp(bb)*wtmp(cc)*mshA%wgauss(aa)*lcut
                  enddo ! nshp
-               enddo ! ngauss
-               write(*,*) ' dmass = ',dmass
+               enddo ! nshp
+             enddo ! ngauss
+             write(*,*) ' dmass = ',dmass
+             write(*,*) '  mass 2 = ',mshA%mass(1,:,:,eid)
+             write(*,*) '  rhs 2 = ',mshA%rhs(1,:,eid)
 
+             ! Adjust the flux terms
+             call shapefunction(mshA%nshp,xcut(1),[x1,x2],[1d0,1d0],wtmp,dwtmp) ! w
+             call shapefunction(mshA%nshp,xcut(1),[x1,x2],qA,qtmp,dqtmp) ! u
+             do bb = 1,mshA%nshp
+               mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) - wtmp(bb)*sum(qtmp) 
+             enddo
+             call shapefunction(mshA%nshp,xcut(2),[x1,x2],[1d0,1d0],wtmp,dwtmp) ! w
+             call shapefunction(mshA%nshp,xcut(2),[x1,x2],qA,qtmp,dqtmp) ! u
+             do bb = 1,mshA%nshp
+               mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) + wtmp(bb)*sum(qtmp) 
+             enddo
+             write(*,*) '  rhs 3 = ',mshA%rhs(1,:,eid)
 
-
-
-
-
-
-
-!               dmass = 0d0 
-!               do aa = 1,mshA%ngauss
-!                 ! transform xgauss onto the sub element
-!                 xg = mshA%xgauss(aa)*(y2-x1)+xs
-!
-!                 call shapefunction(mshA%nshp,xg,[-.5d0,.5d0],[1d0,1d0],qtmp,dqtmp)
-!                 write(*,*) 'xg, Na = ',(xs-x1)/(x2-x1),xg,qtmp
-!!                 xg = (mshA%xgauss(aa)+0.5d0)*(y2-x1) + x1              
-!!                 call shapefunction(mshA%nshp,xg,[x1,x2],[1d0,1d0],qtmp,dqtmp)
-!!                 write(*,*) 'xg, Na = ',x1,y2,mshA%xgauss(aa)+0.5d0,xg,qtmp
-!                 do bb=1,mshA%nshp
-!                 do cc=1,mshA%nshp
-!                   dmass(bb,cc) = dmass(bb,cc)-qtmp(bb)*qtmp(cc)*mshA%wgauss(aa)
-!                   mshA%mass(1,bb,cc,eid) = mshA%mass(1,bb,cc,eid) - qtmp(bb)*qtmp(cc)*mshA%wgauss(aa)
-!                 enddo
-!                 enddo
-!               enddo
-!               write(*,*) '  dmass = ', dmass
-!               write(*,*) '  mass 2 = ', mshA%mass(1,:,:,eid)
- 
-               cycle iloop
-             endif
-             if ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem
-               write(*,*) ' Rside not coded right now'
-               cycle iloop
-             endif
+             cycle iloop
+!             endif
+!             if ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem
+!               write(*,*) ' Rside not coded right now'
+!               cycle iloop
+!             endif
           endif
        enddo eloop
     enddo iloop

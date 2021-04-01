@@ -21,7 +21,7 @@ subroutine computeRHS(msh)
     e1=msh%face(1,i)
     e2=msh%face(2,i)
     ! Calculate the volume integrals
-    if((msh%iblank(msh%e2n(2,e1)).gt.0).and.(msh%iblank(msh%e2n(1,e2)).gt.0)) then 
+!    if((msh%iblank(msh%e2n(2,e1)).gt.0).and.(msh%iblank(msh%e2n(1,e2)).gt.0)) then 
     do j = 1,msh%ngauss
       call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],msh%q(1,:,i),qvals,dqvals)
       qtmp = SUM(qvals)
@@ -33,7 +33,7 @@ subroutine computeRHS(msh)
       enddo 
 !      if(abs(i-50).lt.10) write(*,*) 'qtmp = ',i,qtmp,vol,msh%rhsv(1,:,i)
     enddo
-    endif
+!    endif
     !
     ! Calculate the fluxes
     !write(*,*) 'element i,e1,e2: ',i,e1,e2
@@ -47,12 +47,12 @@ subroutine computeRHS(msh)
         call shapefunction(msh%nshp,msh%xe(1,i),msh%xe(:,i),msh%q(1,:,i),qvals,dqvals)
         qr = sum(qvals)
         call flux(ql,qr,flx)
-        if (msh%iblank(msh%e2n(2,e1)) > 0) then  !XXX not sure what to do about this
+!        if (msh%iblank(msh%e2n(2,e1)) > 0) then  !XXX not sure what to do about this
           do j = 1,msh%nshp
             msh%rhs(:,j,i) = msh%rhs(:,j,i) + w(j)*flx
             msh%rhsf(:,j,i) = msh%rhsf(:,j,i) + w(j)*flx
           enddo
-        endif
+!        endif
         
         ! Right flux boundary
         call shapefunction(msh%nshp,0.5d0,[-0.5d0,0.5d0],[1d0,1d0],qvals,dqvals)
@@ -62,12 +62,12 @@ subroutine computeRHS(msh)
         call shapefunction(msh%nshp,msh%xe(1,e2),msh%xe(:,e2),msh%q(1,:,e2),qvals,dqvals)
         qr = sum(qvals)
         call flux(ql,qr,flx)
-        if (msh%iblank(msh%e2n(1,e2)) > 0) then 
+!        if (msh%iblank(msh%e2n(1,e2)) > 0) then 
           do j = 1,msh%nshp
             msh%rhs(:,j,i) = msh%rhs(:,j,i) - w(j)*flx
             msh%rhsf(:,j,i) = msh%rhsf(:,j,i) - w(j)*flx
           enddo
-        endif
+!        endif
     endif
   enddo
   !
