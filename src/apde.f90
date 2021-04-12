@@ -44,8 +44,10 @@ contains
       f = 0.0d0
       do j = 1,msh%ngauss
         xloc = (msh%xgauss(j)+0.5d0)*dx + msh%xe(1,i)
-        tmp = exp(-20d0*xloc*xloc)
-        if (abs(xloc) > 0.8d0) tmp=0d0
+        tmp = exp(-0.01d0*xloc*xloc)
+        if (abs(xloc) > 40d0) tmp=0d0
+!        tmp = exp(-20d0*xloc*xloc)
+!        if (abs(xloc) > 0.8d0) tmp=0d0
         !tmp = exp(-.010d0*xloc*xloc)
         !if (abs(xloc) > 80d0) tmp=0d0
         call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],[1d0,1d0],qvals,dqvals)
@@ -75,12 +77,12 @@ contains
        write(6,*) 'problem type not implemented'
        call exit(1)
     else     
-       q = 1d0
+!       q = 1d0
 !        q = sin(x)
 !       q=exp(-20*x*x)
 !       if (abs(x) > 0.8d0) q=0d0
-!       q=exp(-0.01*x*x)
-!       if (abs(x) > 40d0) q=0d0
+       q=x !exp(-0.01*x*x)
+       if (abs(x) > 40d0) q=0d0
     endif
   end subroutine initq
   !
@@ -100,6 +102,21 @@ contains
      flx=0.5d0*(0.5d0*(ql*ql+qr*qr)-0.5d0*(ql+qr)*(qr-ql))
     endif
   end subroutine flux
+  !
+  subroutine volintstrong(dqtmp,vol)
+    !
+    implicit none
+    !
+    real*8, intent(in) :: dqtmp
+    real*8, intent(out) :: vol
+    !
+    if (index(pde_descriptor,'linear_advection') > 0 ) then
+     vol=a*dqtmp
+    else if (index(pde_descriptor,'burgers') > 0) then
+     write(*,*) 'Whoops. I will add this later'
+     call exit(1)
+    endif
+  end subroutine volintstrong
   !
   subroutine volint(qtmp,vol)
     !

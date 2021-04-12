@@ -15,9 +15,8 @@ program conservative_overset
   type(mesh), allocatable :: msh(:)
   allocate(msh(nmesh))
   !
-  ntime= 1
-  dt=0.010471975511966d0 !0.05d0/3d0
-  nrk = 3
+  ntime= 200
+  dt=.05d0 !0.010471975511966d0 !0.05d0/3d0
   rk = [1d0/4d0, 8d0/15d0,5d0/12d0, 3d0/4d0];
   write(*,*) 'rk = ',rk(2)
   !
@@ -31,8 +30,9 @@ program conservative_overset
 !call init_mesh(msh(1),[0d0,6.28318530717959d0],0.314159265358979d0,1)
 !call init_mesh(msh(1),[-1d0,1d0],0.05d0,1)
 
-  call init_mesh(msh(1),[-100d0,100d0],2d0,1)
-  call init_mesh(msh(2),[-25.5d0,50.5d0],1d0,0)
+  call init_mesh(msh(1),[-100d0,100d0],1d0,1)
+  call init_mesh(msh(2),[.75d0,50.25d0],0.5d0,0)
+! call init_mesh(msh(2),[-15.5d0,50.5d0],2d0,0)
   !
   do n=1,nmesh
    call initvar(msh(n))
@@ -43,7 +43,11 @@ program conservative_overset
     call connect(msh(1),msh(2))
     call connect(msh(2),msh(1))
     call fixOverlap(msh(2),msh(1))
-  endif
+    call findIncompleteElements(msh(1),elemInfo1,nincomp1)
+    call findIncompleteElements(msh(2),elemInfo2,nincomp2)
+    call fixMassIncompleteElements(msh(1),msh(2),elemInfo2,nincomp2)
+    call fixMassIncompleteElements(msh(2),msh(1),elemInfo1,nincomp1)
+  end if
   !
   ! write IC
   do n=1,nmesh

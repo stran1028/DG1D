@@ -19,8 +19,6 @@ subroutine timestep(nmesh,dt,msh)
       call findIncompleteElements(msh(2),elemInfo2,nincomp2)
       call fixfluxIncompleteElements(msh(1),msh(2),elemInfo2,nincomp2)
       call fixfluxIncompleteElements(msh(2),msh(1),elemInfo1,nincomp1)
-!      call setRHS(msh(1),elemInfo1,nincomp1)
-!      call setRHS(msh(2),elemInfo2,nincomp2)
    end if
    do n=1,nmesh
       ! Solve M dq = rhs

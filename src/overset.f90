@@ -95,15 +95,6 @@ contains
        ib2=msh%iblank(n2)
        if ( ib1*ib2 .le. 0) then
           elemInfo(k) = i
-!          elemInfo(nrows*k+1) = i
-!          elemInfo(nrows*k+2) = msh%xe(1,i)
-!          elemInfo(nrows*k+3) = msh%xe(2,i)
-!          do j=4,3+msh%nshp
-!            elemInfo(nrows*k+j) = msh%q(1,j-3,i)
-!          enddo
-!          do j=4+msh%nshp,3+2*msh%nshp
-!            elemInfo(nrows*k+j) = msh%rhs(1,j-3-msh%nshp,i)
-!          enddo
           k=k+1
        endif
     enddo
@@ -120,24 +111,19 @@ contains
     real*8, intent(inout) :: elemInfo(nincomp)
 !    real*8, intent(inout) :: elemInfo((3+2*msh%nshp)*nincomp)
     !
-    integer :: i,j,e,nrows,aa,bb,cc,eid
+    integer :: i,j,k,e,nrows,aa,bb,cc,eid
     real*8 :: x1,x2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp)
     real*8 :: xcut(2),xc,lcut,xg
     real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp)
-    real*8 :: qtmp(mshA%nshp),dqtmp(mshA%nshp)
+    real*8 :: qtmp(mshA%nshp),dqtmp(mshA%nshp),dq
+    real*8 :: xs, ql,qr,flx,vol
     real*8 :: dmass(mshA%nshp,mshA%nshp)        ! debug vars
-!    real*8 :: dx,dzi,xs,wtmp(mshA%nshp),dwtmp(mshA%nshp),qs,vol,qval
-!    real*8 :: temp(2),xg,qLA,qlB,w(mshA%nshp),zis
-!    real*8 :: dmass(2,2)
-
-!! Do I need all of these elemInfo arrays? Don't I just need i_incomp? It's
-!! confusing this way
     !
     ! elemInfo = incomplete elements on mesh A
     ! msh = mesh info of mesh B
     !
-!    nrows = 3 + 2*msh%nshp              
      iloop: do i=1,nincomp       ! Loop through incomplete elem of mesh A
+       write(*,*) ' '
        write(*,*) 'ST DEBUG eINFO = ',elemInfo
        eid = elemInfo(i)
        x1=mshA%xe(1,eid) !elemInfo(nrows*(i-1)+2) 
@@ -152,6 +138,7 @@ contains
 	     if (mshB%iblank(mshB%e2n(1,j)) .ne.1 .and. &
                  mshB%iblank(mshB%e2n(2,j)) .ne.1) cycle eloop ! skip if incomplete mesh B elem
              qB=mshB%q(1,:,j)
+             write(*,*) '  rhs 1 = ',mshA%rhs(1,:,eid)
 
              if ((x1-y1)*(x1-y2) .le. 0.0) then ! L node of mesh A is inside of mesh B elem
                ! Overlap is between x1 and y2
@@ -159,12 +146,14 @@ contains
                write(*,*) ' '
                write(*,*) 'L node'
                xcut = [x1,0.5d0*(x1+y2)]
+
              elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R ndoe of mesh A is inside of mesh B elem          
                ! Overlap is between y1 and x2
                ! msh A will remove second half of overlap (from 0.5(y1+x2) to x2
                write(*,*) ' '
                write(*,*) 'R node'
                xcut = [0.5d0*(y1+x2),x2]
+
              endif
              lcut = xcut(2)-xcut(1)
              xc = 0.5*(xcut(1)+xcut(2))   ! center of section to be removed
@@ -173,87 +162,116 @@ contains
              write(*,*) '  xcut,lcut,xc: ',xcut,lcut,xc
                
              ! Adjust mass matrix and volume integral
-             write(*,*) '  mass 1 = ',mshA%mass(1,:,:,eid)
-             write(*,*) '  rhs 1 = ',mshA%rhs(1,:,eid)
+             write(*,*) '  rhs 2 = ',mshA%rhs(1,:,eid)
              dmass = 0d0
              do aa = 1,mshA%ngauss
                ! get shapefunction from msh A at quad pts of cut section
                xg = mshA%xgauss(aa)*lcut+xc
                call shapefunction(mshA%nshp,xg,[x1,x2],[1d0,1d0],wtmp,dwtmp)
                call shapefunction(mshA%nshp,xg,[x1,x2],qA,qtmp,dqtmp)
-               write(*,*) '  xg,wtmp: ',xg,wtmp
+               write(*,*) '  xg,wtmp,dq: ',xg,wtmp,dq
                do bb = 1,mshA%nshp
                  ! Volume Integral
-                 mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) -dwtmp(bb)*sum(qtmp)*mshA%wgauss(aa)*lcut/mshA%dx(eid) ! scale integral by cut length in parent element
+                 ! Remove int(w u,x dx) 
+                 ! Note that we are removing the original volume integral
+                 ! (before integration by parts) since it's easier and 
+                 ! mathematically the same 
+                 call volint(sum(dqtmp),vol)
+                 mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) + wtmp(bb)*vol*mshA%wgauss(aa)*lcut/mshA%dx(eID)!- dwtmp(bb)*vol*mshA%wgauss(aa)*lcut/mshA%dx(eid) ! scale integral by cut length in parent element
 
-                 do cc = 1,mshA%nshp
-                    ! Mass matrix
-                    dmass(bb,cc) = dmass(bb,cc) + wtmp(bb)*wtmp(cc)*mshA%wgauss(aa)*lcut
-                    mshA%mass(:,bb,cc,eid) = mshA%mass(:,bb,cc,eid) - wtmp(bb)*wtmp(cc)*mshA%wgauss(aa)*lcut
-                 enddo ! nshp
                enddo ! nshp
              enddo ! ngauss
-             write(*,*) ' dmass = ',dmass
-             write(*,*) '  mass 2 = ',mshA%mass(1,:,:,eid)
-             write(*,*) '  rhs 2 = ',mshA%rhs(1,:,eid)
-
-             ! Adjust the flux terms
-             call shapefunction(mshA%nshp,xcut(1),[x1,x2],[1d0,1d0],wtmp,dwtmp) ! w
-             call shapefunction(mshA%nshp,xcut(1),[x1,x2],qA,qtmp,dqtmp) ! u
-             do bb = 1,mshA%nshp
-               mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) - wtmp(bb)*sum(qtmp) 
-             enddo
-             call shapefunction(mshA%nshp,xcut(2),[x1,x2],[1d0,1d0],wtmp,dwtmp) ! w
-             call shapefunction(mshA%nshp,xcut(2),[x1,x2],qA,qtmp,dqtmp) ! u
-             do bb = 1,mshA%nshp
-               mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) + wtmp(bb)*sum(qtmp) 
-             enddo
              write(*,*) '  rhs 3 = ',mshA%rhs(1,:,eid)
 
              cycle iloop
-!             endif
-!             if ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem
-!               write(*,*) ' Rside not coded right now'
-!               cycle iloop
-!             endif
           endif
        enddo eloop
     enddo iloop
   end subroutine fixFluxIncompleteElements
   !
-  subroutine setRHS(msh,elemInfo,nincomp)
+  subroutine fixMassIncompleteElements(mshB,mshA,elemInfo,nincomp)
+    use bases
+
+    ! Subtract half of overlap section from mesh A (stored in elemInfo)
     implicit none
-    type(mesh), intent(inout) :: msh
-    integer :: nincomp
-    real*8, intent(in) :: elemInfo((3+2*msh%nshp)*nincomp)
-    integer :: i,e,nrows
-    real*8 :: x1,x2,res(msh%nshp)
-    integer, save :: iout=0
+    type(mesh), intent(inout) :: mshA,mshB
+    integer, intent(in) :: nincomp
+    real*8, intent(inout) :: elemInfo(nincomp)
+!    real*8, intent(inout) :: elemInfo((3+2*msh%nshp)*nincomp)
     !
-    nrows = 3 + 2*msh%nshp
-    ! Replace the fluxes for the incomplete elements
-    ! Need to fix for DG XXX
-    do i=1,nincomp
-       e=nint(elemInfo(nrows*(i-1)+1))
-       x1=elemInfo(nrows*(i-1)+2)
-       x2=elemInfo(nrows*(i-1)+3)
-       !write(6,*) 'e,x1,x2=',e,x1,x2,msh%rhs(1,1,e)
-       !write(6,*) 'msh%xe=',msh%xe(:,e)
-       !write(6,*) 'r1:',msh%rhs(1,1,e)
-       msh%xe(1,e)=x1
-       msh%xe(2,e)=x2
-       msh%rhs(1,:,e)=elemInfo(4+msh%nshp:3+2*msh%nshp)
-       !write(6,*) 'r2:',msh%rhs(1,1,e)
-       !write(6,*) 'e,x1,x2=',e,x1,x2,msh%rhs(1,1,e)
-    enddo
+    integer :: i,j,k,e,nrows,aa,bb,cc,eid
+    real*8 :: x1,x2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp)
+    real*8 :: xcut(2),xc,lcut,xg
+    real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp)
+    real*8 :: qtmp(mshA%nshp),dqtmp(mshA%nshp),dq
+    real*8 :: xs, ql,qr,flx,vol
+    real*8 :: dmass(mshA%nshp,mshA%nshp)        ! debug vars
     !
-    !iout=iout+1
-    !do i=1,msh%nelem
-    !   write(40+iout,*) msh%rhs(1,1,i),msh%iblank(msh%e2n(1,i)),&
-    !        msh%iblank(msh%e2n(2,i))
-    !enddo
+    ! elemInfo = incomplete elements on mesh A
+    ! msh = mesh info of mesh B
     !
-  end subroutine setRHS
+     iloop: do i=1,nincomp       ! Loop through incomplete elem of mesh A
+       write(*,*) ' '
+       write(*,*) 'ST DEBUG eINFO = ',elemInfo
+       eid = elemInfo(i)
+       x1=mshA%xe(1,eid) !elemInfo(nrows*(i-1)+2) 
+       x2=mshA%xe(2,eid) !elemInfo(nrows*(i-1)+3)
+       qA=mshA%q(1,:,eid) !elemInfo(nrows*(i-1)+4:nrows*(i-1)+3+msh%nshp)! 
+       eloop: do j=1,mshB%nelem  ! Loop through all elem of mesh B
+          y1=mshB%xe(1,j)
+          y2=mshB%xe(2,j)
+          if (x1 > y2 .or. x2 < y1) then ! skip if not overlapping
+             cycle eloop
+          else
+	     if (mshB%iblank(mshB%e2n(1,j)) .ne.1 .and. &
+                 mshB%iblank(mshB%e2n(2,j)) .ne.1) cycle eloop ! skip if incomplete mesh B elem
+             qB=mshB%q(1,:,j)
+             write(*,*) '  mass 1 = ',mshA%mass(1,:,:,eid)
+
+             if ((x1-y1)*(x1-y2) .le. 0.0) then ! L node of mesh A is inside of mesh B elem
+               ! Overlap is between x1 and y2
+               ! mshA will remove first half of overlap (from x1 to 0.5*(x1+y2))
+               write(*,*) ' '
+               write(*,*) 'L node'
+               xcut = [x1,0.5d0*(x1+y2)]
+
+             elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R ndoe of mesh A is inside of mesh B elem          
+               ! Overlap is between y1 and x2
+               ! msh A will remove second half of overlap (from 0.5(y1+x2) to x2
+               write(*,*) ' '
+               write(*,*) 'R node'
+               xcut = [0.5d0*(y1+x2),x2]
+
+             endif
+             lcut = xcut(2)-xcut(1)
+             xc = 0.5*(xcut(1)+xcut(2))   ! center of section to be removed
+             write(*,*) '  y1,y2: ',y1,y2
+             write(*,*) '  x1,x2: ',x1,x2
+             write(*,*) '  xcut,lcut,xc: ',xcut,lcut,xc
+               
+             ! Adjust mass matrix and volume integral
+             dmass = 0d0
+             do aa = 1,mshA%ngauss
+               ! get shapefunction from msh A at quad pts of cut section
+               xg = mshA%xgauss(aa)*lcut+xc
+               call shapefunction(mshA%nshp,xg,[x1,x2],[1d0,1d0],wtmp,dwtmp)
+               do bb = 1,mshA%nshp
+                 do cc = 1,mshA%nshp
+                    ! Fix mass matrix
+                    dmass(bb,cc) = dmass(bb,cc) + wtmp(bb)*wtmp(cc)*mshA%wgauss(aa)*lcut
+                    mshA%mass(:,bb,cc,eid) = mshA%mass(:,bb,cc,eid) - wtmp(bb)*wtmp(cc)*mshA%wgauss(aa)*lcut
+                 enddo ! nshp
+
+               enddo ! nshp
+             enddo ! ngauss
+             write(*,*) ' dmass = ',dmass
+             write(*,*) '  mass 2 = ',mshA%mass(1,:,:,eid)
+
+             cycle iloop
+          endif
+       enddo eloop
+    enddo iloop
+  end subroutine fixMassIncompleteElements
   !
 end module overset
           
