@@ -18,18 +18,20 @@ subroutine solveDQ(msh,dt)
     msh%dq(1,1,i) = invM(1)*msh%rhs(1,1,i) + invM(2)*msh%rhs(1,2,i)
     msh%dq(1,2,i) = invM(3)*msh%rhs(1,1,i) + invM(4)*msh%rhs(1,2,i)
  
-!    if(abs(i-50).lt.10) then 
-!    write(*,*) 'Element ',i
-!    write(*,*) '  mass = ',mass(1),mass(2),mass(3),mass(4)
-!    write(*,*) '  dx = ',msh%dx(i)
-!    write(*,*) '  detM = ',detM
-!    write(*,*) '  invM = ',invM
-!    write(*,*) '  rhsV = ',msh%rhsv(:,:,i)   
-!    write(*,*) '  rhsF = ',msh%rhsf(:,:,i)   
-!    write(*,*) '  rhs = ',msh%rhs(:,:,i)   
-!    write(*,*) '  q0 = ',msh%q(:,:,i) 
-!    write(*,*) '  msh%dq = ',msh%dq
-!    endif
+    if(i.eq.131) then 
+    write(*,*) 'Element ',i
+    write(*,*) '  mass = ',mass(1),mass(2),mass(3),mass(4)
+    write(*,*) '  iblank = ',msh%iblank(msh%e2n(:,i))
+    write(*,*) '  x = ',msh%x(msh%e2n(:,i))
+    write(*,*) '  dx = ',msh%dx(i)
+    write(*,*) '  detM = ',detM
+    write(*,*) '  invM = ',invM
+    write(*,*) '  rhsV = ',msh%rhsv(:,:,i)   
+    write(*,*) '  rhsF = ',msh%rhsf(:,:,i)   
+    write(*,*) '  rhs = ',msh%rhs(:,:,i)   
+    write(*,*) '  q0 = ',msh%q(1,:,i) 
+    write(*,*) '  msh%dq = ',msh%dq(1,:,i)
+    endif
 
    ! 1st order Euler in time
 !    relax = 1.0d0

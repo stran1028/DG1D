@@ -31,7 +31,7 @@ program conservative_overset
 !call init_mesh(msh(1),[-1d0,1d0],0.05d0,1)
 
   call init_mesh(msh(1),[-100d0,100d0],1d0,1)
-  call init_mesh(msh(2),[.75d0,50.25d0],0.5d0,0)
+  call init_mesh(msh(2),[.75d0,30.25d0],0.5d0,0)
 ! call init_mesh(msh(2),[-15.5d0,50.5d0],2d0,0)
   !
   do n=1,nmesh
@@ -40,7 +40,9 @@ program conservative_overset
   !
   ! Blank out coarser overlapping cells 
   if(nmesh>1) then 
+    write(*,*) 'Connect 1 and 2'
     call connect(msh(1),msh(2))
+    write(*,*) 'Connect 2 and 1'
     call connect(msh(2),msh(1))
     call fixOverlap(msh(2),msh(1))
     call findIncompleteElements(msh(1),elemInfo1,nincomp1)
@@ -65,22 +67,29 @@ program conservative_overset
    ! RK step 1
    call timestep(nmesh,dt,msh)
    do j = 1,nmesh
-     msh(j)%q=msh(j)%sol+rk(2)*dt*msh(j)%dq
-     msh(j)%sol=msh(j)%sol+rk(1)*dt*msh(j)%dq
+!     msh(j)%q=msh(j)%sol+rk(2)*dt*msh(j)%dq
+!     msh(j)%sol=msh(j)%sol+rk(1)*dt*msh(j)%dq
+
+        ! debug 
+        msh(j)%q = msh(j)%q + dt*msh(j)%dq
+        msh(j)%sol = msh(j)%q
    enddo
 
    ! RK step 2
-   call timestep(nmesh,dt,msh)
+!   call timestep(nmesh,dt,msh)
    do j = 1,nmesh
-     msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
+!     msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
    enddo
 
    ! RK step 3
-   call timestep(nmesh,dt,msh)
+!   call timestep(nmesh,dt,msh)
    do j = 1,nmesh
-     msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
-     msh(j)%q = msh(j)%sol
+!     msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
+!     msh(j)%q = msh(j)%sol
    enddo
+
+   write(*,*) 'mesh 1 min/max = ',minval(msh(1)%q(1,:,:)),maxval(msh(1)%q(1,:,:))
+   write(*,*) 'mesh 2 min/max = ',minval(msh(2)%q(1,:,:)),maxval(msh(2)%q(1,:,:))
   end do ! timesteps
   !
   ! write final output

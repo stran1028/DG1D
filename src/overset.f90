@@ -20,6 +20,7 @@ contains
                msh2%xe(1,j) .le. msh1%x(i)) then
              dx=msh2%xe(2,j)-msh2%xe(1,j)
              if (msh1%nres(i) > dx) then ! blank out cells where m2 is finer
+!                write(*,*) 'Node A, Elem B,nres,dx:',i,j,msh1%nres(i),dx
                 msh1%iblank(i)=-1
              endif
           endif
@@ -113,11 +114,12 @@ contains
     !
     integer :: i,j,k,e,nrows,aa,bb,cc,eid
     real*8 :: x1,x2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp)
-    real*8 :: xcut(2),xc,lcut,xg
+    real*8 :: xcut(2),xc,lcut,xg,vol,flx,ql,qr
     real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp)
     real*8 :: qtmp(mshA%nshp),dqtmp(mshA%nshp),dq
-    real*8 :: xs, ql,qr,flx,vol
-    real*8 :: dmass(mshA%nshp,mshA%nshp)        ! debug vars
+
+!!! XXX add in volume and flux integral for the overset element here
+
     !
     ! elemInfo = incomplete elements on mesh A
     ! msh = mesh info of mesh B
@@ -146,6 +148,19 @@ contains
                write(*,*) ' '
                write(*,*) 'L node'
                xcut = [x1,0.5d0*(x1+y2)]
+               
+               ! add intermesh flux from mesh B interior to mesh A L node
+               call shapefunction(mshA%nshp,-0.5d0,[-0.5d0,0.5d0],[1d0,1d0],qtmp,dqtmp)
+               wtmp = qtmp
+               call shapefunction(mshB%nshp,x1,[y1,y2],qB,qtmp,dqtmp)
+               qL = sum(qtmp)
+               call shapefunction(mshA%nshp,x1,[x1,x2],qA,qtmp,dqtmp)
+               qR = sum(qtmp)
+               call flux(ql,qr,flx)
+               do k = 1,mshA%nshp
+                 write(*,*) 'stdebug1',wtmp(k)*flx
+                 mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) + wtmp(k)*flx
+               enddo
 
              elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R ndoe of mesh A is inside of mesh B elem          
                ! Overlap is between y1 and x2
@@ -154,22 +169,35 @@ contains
                write(*,*) 'R node'
                xcut = [0.5d0*(y1+x2),x2]
 
+               ! add intermesh flux from mesh B interior to mesh A R node
+               call shapefunction(mshA%nshp,0.5d0,[-0.5d0,0.5d0],[1d0,1d0],qtmp,dqtmp)
+               wtmp = qtmp
+               call shapefunction(mshB%nshp,x2,[y1,y2],qB,qtmp,dqtmp)
+               qR = sum(qtmp)
+               call shapefunction(mshA%nshp,x2,[x1,x2],qA,qtmp,dqtmp)
+               qL = sum(qtmp)
+               call flux(ql,qr,flx)
+               write(*,*) 'stdebug2 ib',mshA%iblank(mshA%e2n(:,eid))
+               do k = 1,mshA%nshp
+                 write(*,*) 'stdebug2',wtmp(k)*flx
+                 mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) - wtmp(k)*flx
+               enddo
+
              endif
              lcut = xcut(2)-xcut(1)
              xc = 0.5*(xcut(1)+xcut(2))   ! center of section to be removed
-             write(*,*) '  y1,y2: ',y1,y2
-             write(*,*) '  x1,x2: ',x1,x2
-             write(*,*) '  xcut,lcut,xc: ',xcut,lcut,xc
+!             write(*,*) '  y1,y2: ',y1,y2
+!             write(*,*) '  x1,x2: ',x1,x2
+!             write(*,*) '  xcut,lcut,xc: ',xcut,lcut,xc
                
              ! Adjust mass matrix and volume integral
-             write(*,*) '  rhs 2 = ',mshA%rhs(1,:,eid)
-             dmass = 0d0
+!             write(*,*) '  rhs 2 = ',mshA%rhs(1,:,eid)
              do aa = 1,mshA%ngauss
                ! get shapefunction from msh A at quad pts of cut section
                xg = mshA%xgauss(aa)*lcut+xc
                call shapefunction(mshA%nshp,xg,[x1,x2],[1d0,1d0],wtmp,dwtmp)
                call shapefunction(mshA%nshp,xg,[x1,x2],qA,qtmp,dqtmp)
-               write(*,*) '  xg,wtmp,dq: ',xg,wtmp,dq
+!               write(*,*) '  xg,wtmp,dq: ',xg,wtmp,dq
                do bb = 1,mshA%nshp
                  ! Volume Integral
                  ! Remove int(w u,x dx) 
@@ -177,7 +205,7 @@ contains
                  ! (before integration by parts) since it's easier and 
                  ! mathematically the same 
                  call volint(sum(dqtmp),vol)
-                 mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) + wtmp(bb)*vol*mshA%wgauss(aa)*lcut/mshA%dx(eID)!- dwtmp(bb)*vol*mshA%wgauss(aa)*lcut/mshA%dx(eid) ! scale integral by cut length in parent element
+                 mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) + wtmp(bb)*vol*mshA%wgauss(aa)*lcut/mshA%dx(eID) ! scale gauss weights by cut length in parent element
 
                enddo ! nshp
              enddo ! ngauss
@@ -203,8 +231,6 @@ contains
     real*8 :: x1,x2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp)
     real*8 :: xcut(2),xc,lcut,xg
     real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp)
-    real*8 :: qtmp(mshA%nshp),dqtmp(mshA%nshp),dq
-    real*8 :: xs, ql,qr,flx,vol
     real*8 :: dmass(mshA%nshp,mshA%nshp)        ! debug vars
     !
     ! elemInfo = incomplete elements on mesh A
@@ -231,23 +257,23 @@ contains
              if ((x1-y1)*(x1-y2) .le. 0.0) then ! L node of mesh A is inside of mesh B elem
                ! Overlap is between x1 and y2
                ! mshA will remove first half of overlap (from x1 to 0.5*(x1+y2))
-               write(*,*) ' '
-               write(*,*) 'L node'
+!               write(*,*) ' '
+!               write(*,*) 'L node'
                xcut = [x1,0.5d0*(x1+y2)]
 
              elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R ndoe of mesh A is inside of mesh B elem          
                ! Overlap is between y1 and x2
                ! msh A will remove second half of overlap (from 0.5(y1+x2) to x2
-               write(*,*) ' '
-               write(*,*) 'R node'
+!               write(*,*) ' '
+!               write(*,*) 'R node'
                xcut = [0.5d0*(y1+x2),x2]
 
              endif
              lcut = xcut(2)-xcut(1)
              xc = 0.5*(xcut(1)+xcut(2))   ! center of section to be removed
-             write(*,*) '  y1,y2: ',y1,y2
-             write(*,*) '  x1,x2: ',x1,x2
-             write(*,*) '  xcut,lcut,xc: ',xcut,lcut,xc
+!             write(*,*) '  y1,y2: ',y1,y2
+!             write(*,*) '  x1,x2: ',x1,x2
+!             write(*,*) '  xcut,lcut,xc: ',xcut,lcut,xc
                
              ! Adjust mass matrix and volume integral
              dmass = 0d0
@@ -264,7 +290,7 @@ contains
 
                enddo ! nshp
              enddo ! ngauss
-             write(*,*) ' dmass = ',dmass
+!             write(*,*) ' dmass = ',dmass
              write(*,*) '  mass 2 = ',mshA%mass(1,:,:,eid)
 
              cycle iloop

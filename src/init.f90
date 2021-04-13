@@ -29,7 +29,7 @@ subroutine init_mesh(msh,xlim,dx,iperiodic)
 !  msh%xgauss = 0.5d0*[0d0,-0.90618d0,-0.538469d0,.538469d0,0.90618d0]
 !  msh%wgauss = 0.5d0*[0.568889d0, 0.236927d0,0.478629d0,0.478629d0,0.236927d0]
 
-  msh%nnodes=msh%nelem*2
+  msh%nnodes=msh%nelem*2d0
   allocate(msh%x(msh%nnodes))
   allocate(msh%e2n(2,msh%nelem)) ! element to node number map? 
   allocate(msh%xe(2,msh%nelem))
