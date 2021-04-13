@@ -57,10 +57,8 @@ contains
       enddo
 
       ! solve the elementary system for u
-     ! write(*,*) 'elem, xloc,tmp, f: ',i,xloc,tmp,f
       msh%q(1,1,i) = invM(1)*f(1) + invM(2)*f(2)
       msh%q(1,2,i) = invM(3)*f(1) + invM(4)*f(2)
-    !  write(*,*) 'elem, q: ',msh%q(1,1,i),msh%q(1,2,i)
      
     enddo
   end subroutine initqleg
@@ -81,7 +79,7 @@ contains
 !        q = sin(x)
 !       q=exp(-20*x*x)
 !       if (abs(x) > 0.8d0) q=0d0
-       q=x !exp(-0.01*x*x)
+       q=exp(-0.01*x*x)
        if (abs(x) > 40d0) q=0d0
     endif
   end subroutine initq

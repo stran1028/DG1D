@@ -22,8 +22,6 @@ subroutine timestep(nmesh,dt,msh)
    end if
    do n=1,nmesh
       ! Solve M dq = rhs
-      write(*,*) 'Mesh Solve: ',n
-      write(*,*) '---------------------'
       call solvedq(msh(n),dt)
 !      call computeMoments(msh(n),mom1(:,n))
    enddo

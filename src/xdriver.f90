@@ -15,7 +15,7 @@ program conservative_overset
   type(mesh), allocatable :: msh(:)
   allocate(msh(nmesh))
   !
-  ntime= 200
+  ntime= 4000
   dt=.05d0 !0.010471975511966d0 !0.05d0/3d0
   rk = [1d0/4d0, 8d0/15d0,5d0/12d0, 3d0/4d0];
   write(*,*) 'rk = ',rk(2)
@@ -67,29 +67,23 @@ program conservative_overset
    ! RK step 1
    call timestep(nmesh,dt,msh)
    do j = 1,nmesh
-!     msh(j)%q=msh(j)%sol+rk(2)*dt*msh(j)%dq
-!     msh(j)%sol=msh(j)%sol+rk(1)*dt*msh(j)%dq
-
-        ! debug 
-        msh(j)%q = msh(j)%q + dt*msh(j)%dq
-        msh(j)%sol = msh(j)%q
+     msh(j)%q=msh(j)%sol+rk(2)*dt*msh(j)%dq
+     msh(j)%sol=msh(j)%sol+rk(1)*dt*msh(j)%dq
    enddo
 
    ! RK step 2
-!   call timestep(nmesh,dt,msh)
+   call timestep(nmesh,dt,msh)
    do j = 1,nmesh
-!     msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
+     msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
    enddo
 
    ! RK step 3
-!   call timestep(nmesh,dt,msh)
+   call timestep(nmesh,dt,msh)
    do j = 1,nmesh
-!     msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
-!     msh(j)%q = msh(j)%sol
+     msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
+     msh(j)%q = msh(j)%sol
    enddo
 
-   write(*,*) 'mesh 1 min/max = ',minval(msh(1)%q(1,:,:)),maxval(msh(1)%q(1,:,:))
-   write(*,*) 'mesh 2 min/max = ',minval(msh(2)%q(1,:,:)),maxval(msh(2)%q(1,:,:))
   end do ! timesteps
   !
   ! write final output

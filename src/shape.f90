@@ -5,7 +5,6 @@ contains
     subroutine setshp(val)
       character*(*) :: val
       shptype = trim(adjustl(val))
-      write(*,*) 'shp = ',shptype
       if((shptype.ne.'lagrange').and.(shptype.ne.'legendre')) then
         write(*,*) 'That shape function is not supported. Exiting.'
         call exit(1)
@@ -26,7 +25,6 @@ contains
       dx = xlim(2)-xlim(1)
       xc = 0.5d0*(xlim(2)+xlim(1))
       zi = (x-xc)/dx 
-!      write(*,*) 'shape: x,dx,xc,zi',x,dx,xc,zi
       !
       qval = 0.0d0
       if(shptype.eq.'lagrange') then 
@@ -41,8 +39,6 @@ contains
         dqval(1) = 0d0*q(1)
         qval(2) = zi*q(2) 
         dqval(2) = 1d0*q(2)
-       ! write(*,*) 'qval = ',qval
-       ! write(*,*) 'dqval = ',dqval
 !        qval(3) = 0.5d0*(3d0*zi*zi-1d0) *q(3)
 !        dqval(3) = 3d0*zi*q(3)
         qout = qval(1:nshp)

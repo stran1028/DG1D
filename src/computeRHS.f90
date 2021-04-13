@@ -14,20 +14,12 @@ subroutine computeRHS(msh)
   !
   ! rhs = (msh%nfields,msh%nshp,msh%nelem)
   msh%rhs=0d0
-  msh%rhsv=0d0
-  msh%rhsf=0d0
   !
-  write(*,*) 'Compute RHS'
   do i = 1,msh%nelem
     e1=msh%face(1,i)
     e2=msh%face(2,i)
-    if(i.eq.131) write(*,*) '  e1,e2 = ',e1,e2
-    if(i.eq.131) write(*,*) '  iblanks left = ',msh%iblank(msh%e2n(1,e1)),msh%iblank(msh%e2n(2,e1))
-    if(i.eq.131) write(*,*) '  iblanks = ',msh%iblank(msh%e2n(1,i)),msh%iblank(msh%e2n(2,i))
-    if(i.eq.131) write(*,*) '  iblanks right = ',msh%iblank(msh%e2n(1,e2)),msh%iblank(msh%e2n(2,e2))
     ! Calculate the volume integrals
     ! For Fringe elements, do the volume integral but not fluxes
-!    if((msh%iblank(msh%e2n(2,e1)).gt.0).and.(msh%iblank(msh%e2n(1,e2)).gt.0)) then 
     do j = 1,msh%ngauss
       call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],msh%q(1,:,i),qvals,dqvals)
       qtmp = SUM(qvals)
@@ -35,11 +27,8 @@ subroutine computeRHS(msh)
          call volint(qtmp,vol)
          vol = vol*msh%dshp(j,k)*msh%wgauss(j)
          msh%rhs(1,k,i) = msh%rhs(1,k,i) + vol 
-         msh%rhsv(1,k,i) = msh%rhsv(1,k,i) + vol 
       enddo 
-!      if(abs(i-50).lt.10) write(*,*) 'qtmp = ',i,qtmp,vol,msh%rhsv(1,:,i)
     enddo
-!    endif
     !
     ! Calculate the fluxes within current mesh
     ! For fringe elements where flux comes from other mesh, 
@@ -54,11 +43,9 @@ subroutine computeRHS(msh)
         call shapefunction(msh%nshp,msh%xe(1,i),msh%xe(:,i),msh%q(1,:,i),qvals,dqvals)
         qr = sum(qvals)
         call flux(ql,qr,flx)
-        if(i.eq.1) write(*,*) '  left ql,qr,flx = ',ql,qr,flx
         if ((msh%iblank(msh%e2n(2,e1)) > 0).and.(e1.ne.i)) then 
           do j = 1,msh%nshp
             msh%rhs(:,j,i) = msh%rhs(:,j,i) + w(j)*flx
-            msh%rhsf(:,j,i) = msh%rhsf(:,j,i) + w(j)*flx
           enddo
         endif
         
@@ -70,11 +57,9 @@ subroutine computeRHS(msh)
         call shapefunction(msh%nshp,msh%xe(1,e2),msh%xe(:,e2),msh%q(1,:,e2),qvals,dqvals)
         qr = sum(qvals)
         call flux(ql,qr,flx)
-        if (i.eq.1) write(*,*) '  right ql,qr,flx = ',ql,qr,flx
         if ((msh%iblank(msh%e2n(1,e2)) > 0).and.(e2.ne.i)) then 
           do j = 1,msh%nshp
             msh%rhs(:,j,i) = msh%rhs(:,j,i) - w(j)*flx
-            msh%rhsf(:,j,i) = msh%rhsf(:,j,i) - w(j)*flx
           enddo
         endif
     endif
