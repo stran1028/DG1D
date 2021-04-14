@@ -11,14 +11,14 @@ subroutine solveDQ(msh,dt)
   do i=1,msh%nelem
     ! solve Ax=b problem for x
     call lu(msh%mass,msh%nshp,L,U)
-    call backpropL(L,msh%rhs(1,:,i),msh%nshp,y)
-    call backpropU(U,y,msh%nshp,msh%dq(1,:,i))
+    call forwprop(L,msh%rhs(1,:,i),msh%nshp,y)
+    call backprop(U,y,msh%nshp,msh%dq(1,:,i))
 
-    write(*,*) ' '
-    write(*,*) 'i = ',i
-    write(*,*) 'mass = ',msh%mass(1,:,i)
-    write(*,*) 'rhs = ',msh%rhs(1,:,i)
-    write(*,*) 'dq = ',msh%dq(1,:,i)
+!    write(*,*) ' '
+!    write(*,*) 'i = ',i
+!    write(*,*) 'mass = ',msh%mass(1,:,i)
+!    write(*,*) 'rhs = ',msh%rhs(1,:,i)
+!    write(*,*) 'dq = ',msh%dq(1,:,i)
     
    ! 1st order Euler in time
 !    relax = 1.0d0

@@ -15,7 +15,7 @@
 
   end subroutine matvec
 
-  subroutine backpropU(U,b,n,x)
+  subroutine backprop(U,b,n,x)
     implicit none
     integer, intent(in) :: n
     real*8, dimension(n*n),intent(in) ::  U
@@ -34,9 +34,9 @@
       index1 = (i-1)*n+i
       x(i) = x(i)/(U(index1)+1e-15)
     enddo
-  end subroutine backpropU
+  end subroutine backprop
 
-  subroutine backpropL(L,b,n,x)
+  subroutine forwprop(L,b,n,x)
     implicit none
     integer, intent(in) :: n
     real*8, dimension(n*n),intent(in) ::  L
@@ -46,7 +46,6 @@
   
     ! solve Lx = b where L is lower triangular matrix
     x(1) = b(1)/(L(1)+1e-15)
-    write(*,*) 'x(1) = ',x(1)
 
     do i = 2,n
       x(i) = b(i)
@@ -57,7 +56,7 @@
       index1 = (i-1)*n+i
       x(i) = x(i)/(L(index1)+1e-15)
     enddo
-  end subroutine backpropL
+  end subroutine forwprop
 
   subroutine lu(A,n,L,U)
     implicit none

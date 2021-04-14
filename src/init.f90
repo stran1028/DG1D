@@ -1,4 +1,4 @@
-subroutine init_mesh(msh,xlim,dx,iperiodic)
+subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   !
   use code_types
   use bases
@@ -7,7 +7,7 @@ subroutine init_mesh(msh,xlim,dx,iperiodic)
   type(mesh), intent(inout) :: msh
   real*8, intent(in) :: xlim(2)
   real*8, intent(in) :: dx
-  integer, intent(in) :: iperiodic
+  integer, intent(in) :: iperiodic,order
   !
   real*8 :: dxmod
   integer:: i,j,k,ii,index1
@@ -16,9 +16,10 @@ subroutine init_mesh(msh,xlim,dx,iperiodic)
   dxmod=(xlim(2)-xlim(1))/msh%nelem
   !
   msh%nfields=1
-  msh%porder=1
+  msh%porder=order
   msh%iperiodic=iperiodic
-  msh%nshp = msh%porder+1 
+  msh%nshp = order+1 
+  write(*,*) 'order,nshp = ',order,msh%nshp
   !
   msh%ngauss=3
   allocate(msh%xgauss(msh%ngauss))

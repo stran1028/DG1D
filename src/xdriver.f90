@@ -6,7 +6,7 @@ program conservative_overset
   implicit none
   !
   integer, parameter :: nmesh=2
-  integer :: i,ntime,n,j
+  integer :: i,ntime,n,j,order
   real*8 :: dt,mom1(2,nmesh),mom0(2,nmesh)
   real*8, allocatable :: elemInfo1(:),elemInfo2(:)
   integer :: nincomp1,nincomp2,nrk
@@ -15,22 +15,23 @@ program conservative_overset
   type(mesh), allocatable :: msh(:)
   allocate(msh(nmesh))
   !
-  ntime= 1 ! 4000
+  ntime= 4000 ! 4000
   dt=.1d0 !0.010471975511966d0 !0.05d0/3d0
   rk = [1d0/4d0, 8d0/15d0,5d0/12d0, 3d0/4d0];
   !
   ! Set up the problem and bases types
   call set_type('linear_advection',1d0)
   !call set_type('burgers')
-  call setshp('lagrange')
-!  call setshp('legendre')
+!  call setshp('lagrange')
+  call setshp('legendre')
   !
   ! Initialize the mesh(es)
 !call init_mesh(msh(1),[0d0,6.28318530717959d0],0.314159265358979d0,1)
 !call init_mesh(msh(1),[-1d0,1d0],0.05d0,1)
 
-  call init_mesh(msh(1),[-100d0,100d0],1d0,1)
-  call init_mesh(msh(2),[-10.1d0,20.6d0],0.5d0,0)
+  order = 1
+  call init_mesh(msh(1),[-100d0,100d0],1d0,1,order)
+  call init_mesh(msh(2),[-10.1d0,20.6d0],0.5d0,0,order)
 ! call init_mesh(msh(2),[-15.5d0,50.5d0],2d0,0)
   !
   do n=1,nmesh
