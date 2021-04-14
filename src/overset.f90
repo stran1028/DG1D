@@ -208,7 +208,7 @@ contains
     real*8, intent(inout) :: elemInfo(nincomp)
 !    real*8, intent(inout) :: elemInfo((3+2*msh%nshp)*nincomp)
     !
-    integer :: i,j,k,e,nrows,aa,bb,cc,eid
+    integer :: i,j,k,e,nrows,aa,bb,cc,eid,index1
     real*8 :: x1,x2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp)
     real*8 :: xcut(2),xc,lcut,xg
     real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp)
@@ -252,8 +252,9 @@ contains
                call shapefunction(mshA%nshp,xg,[x1,x2],[1d0,1d0],wtmp,dwtmp)
                do bb = 1,mshA%nshp
                  do cc = 1,mshA%nshp
+                    index1 = (bb-1)*mshA%nshp+cc
                     ! Fix mass matrix
-                    mshA%mass(:,bb,cc,eid) = mshA%mass(:,bb,cc,eid) - wtmp(bb)*wtmp(cc)*mshA%wgauss(aa)*lcut
+                    mshA%mass(:,index1,eid) = mshA%mass(:,index1,eid) - wtmp(bb)*wtmp(cc)*mshA%wgauss(aa)*lcut
                  enddo ! nshp
 
                enddo ! nshp

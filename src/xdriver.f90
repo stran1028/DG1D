@@ -15,10 +15,9 @@ program conservative_overset
   type(mesh), allocatable :: msh(:)
   allocate(msh(nmesh))
   !
-  ntime= 4000
-  dt=.05d0 !0.010471975511966d0 !0.05d0/3d0
+  ntime= 1 ! 4000
+  dt=.1d0 !0.010471975511966d0 !0.05d0/3d0
   rk = [1d0/4d0, 8d0/15d0,5d0/12d0, 3d0/4d0];
-  write(*,*) 'rk = ',rk(2)
   !
   ! Set up the problem and bases types
   call set_type('linear_advection',1d0)
@@ -31,7 +30,7 @@ program conservative_overset
 !call init_mesh(msh(1),[-1d0,1d0],0.05d0,1)
 
   call init_mesh(msh(1),[-100d0,100d0],1d0,1)
-  call init_mesh(msh(2),[.75d0,30.25d0],0.5d0,0)
+  call init_mesh(msh(2),[-10.1d0,20.6d0],0.5d0,0)
 ! call init_mesh(msh(2),[-15.5d0,50.5d0],2d0,0)
   !
   do n=1,nmesh

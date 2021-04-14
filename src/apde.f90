@@ -27,7 +27,9 @@ contains
     use bases
     type(mesh), intent(inout)::msh
     integer i,j,k
-    real*8 :: mass(4),detM,invM(4)
+!    real*8 :: mass(4),detM,invM(4)
+    real*8,dimension(msh%nshp*msh%nshp) :: L,U
+    real*8,dimension(msh%nshp) :: y
     real*8 :: qvals(msh%nshp),dqvals(msh%nshp),f(msh%nshp),tmp,xloc,dx
 
     ! Use projection to set the IC
@@ -36,10 +38,10 @@ contains
     do i = 1,msh%nelem
       dx = msh%xe(2,i)-msh%xe(1,i)
 
-      mass = [msh%mass(1,1,1,i), msh%mass(1,1,2,i), msh%mass(1,2,1,i),msh%mass(1,2,2,i)]
-      detM = mass(1)*mass(4) - mass(2)*mass(3)
-      invM = [mass(4),-mass(2),-mass(3),mass(1)]
-      invM = invM/(1e-16+detM)
+!      mass = [msh%mass(1,1,1,i), msh%mass(1,1,2,i), msh%mass(1,2,1,i),msh%mass(1,2,2,i)]
+!      detM = mass(1)*mass(4) - mass(2)*mass(3)
+!      invM = [mass(4),-mass(2),-mass(3),mass(1)]
+!      invM = invM/(1e-16+detM)
 
       f = 0.0d0
       do j = 1,msh%ngauss
@@ -57,8 +59,12 @@ contains
       enddo
 
       ! solve the elementary system for u
-      msh%q(1,1,i) = invM(1)*f(1) + invM(2)*f(2)
-      msh%q(1,2,i) = invM(3)*f(1) + invM(4)*f(2)
+      call lu(msh%mass,msh%nshp,L,U)
+      call backpropL(L,f,msh%nshp,y)
+      call backpropU(U,y,msh%nshp,msh%q(1,:,i))
+
+!      msh%q(1,1,i) = invM(1)*f(1) + invM(2)*f(2)
+!      msh%q(1,2,i) = invM(3)*f(1) + invM(4)*f(2)
      
     enddo
   end subroutine initqleg

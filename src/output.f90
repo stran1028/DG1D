@@ -1,5 +1,6 @@
 subroutine output(iout,msh)
   use code_types
+  use pde
   use bases
   !
   implicit none
@@ -7,7 +8,7 @@ subroutine output(iout,msh)
   type(mesh), intent(in) :: msh
   !
   integer :: i
-  real*8 :: qout(msh%nshp),dqout(msh%nshp),q1,q2
+  real*8 :: qout(msh%nshp),dqout(msh%nshp),q1,q2,error(1)
   character*6 :: fname
   !
   write(fname,'(A5,I1)') 'aout.',iout
@@ -25,9 +26,14 @@ subroutine output(iout,msh)
        q2 = sum(qout)
 
        write(11,*) 0.5*(msh%xe(1,i)+msh%xe(2,i)),&
-                   (q1+q2)/msh%nshp                   
-       write(12,*) msh%xe(1,i),q1
-       write(12,*) msh%xe(msh%nshp,i),q2
+                   (q1+q2)/msh%nshp     
+       call initq(msh%xe(1,i),error)
+       error = error-q1
+       write(12,*) msh%xe(1,i),q1, error
+
+       call initq(msh%xe(2,i),error)
+       error = error-q2
+       write(12,*) msh%xe(2,i),q2,error
     endif
   enddo
   close(11)

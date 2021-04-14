@@ -10,7 +10,7 @@ subroutine init_mesh(msh,xlim,dx,iperiodic)
   integer, intent(in) :: iperiodic
   !
   real*8 :: dxmod
-  integer:: i,j,k,ii
+  integer:: i,j,k,ii,index1
   !
   msh%nelem=nint((xlim(2)-xlim(1))/dx)
   dxmod=(xlim(2)-xlim(1))/msh%nelem
@@ -69,7 +69,7 @@ subroutine init_mesh(msh,xlim,dx,iperiodic)
   allocate(msh%q(msh%nfields,msh%nshp,msh%nelem))
   allocate(msh%sol(msh%nfields,msh%nshp,msh%nelem))
   allocate(msh%rhs(msh%nfields,msh%nshp,msh%nelem))
-  allocate(msh%mass(msh%nfields,msh%nshp,msh%nshp,msh%nelem))
+  allocate(msh%mass(msh%nfields,msh%nshp*msh%nshp,msh%nelem))
   allocate(msh%iblank(msh%nnodes))
   allocate(msh%nres(msh%nnodes))
   !
@@ -78,8 +78,9 @@ subroutine init_mesh(msh,xlim,dx,iperiodic)
   do ii = 1,msh%nelem
   do i = 1,msh%nshp
   do j = 1,msh%nshp
+    index1 = (i-1)*msh%nshp+j
     do k = 1,msh%ngauss
-      msh%mass(1,i,j,ii) = msh%mass(1,i,j,ii) + msh%shp(k,i)*msh%shp(k,j)*msh%wgauss(k)*msh%dx(ii)
+      msh%mass(1,index1,ii) = msh%mass(1,index1,ii) + msh%shp(k,i)*msh%shp(k,j)*msh%wgauss(k)*msh%dx(ii)
     enddo
   enddo
   enddo

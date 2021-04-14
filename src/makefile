@@ -7,7 +7,7 @@ CFLAGS = -g #-fpe0
 FFLAGS =  -fbacktrace -fbounds-check
 INCLUDES = 
 OBJF90 = shape.o amodules.o apde.o clearMem.o computeMoments.o computeRHS.o init.o \
-         initvar.o output.o overset.o solvedq.o timestep.o  xdriver.o
+         initvar.o matrixsolve.o output.o overset.o solvedq.o timestep.o  xdriver.o
 
 LDFLAGS=
 

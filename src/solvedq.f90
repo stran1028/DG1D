@@ -5,19 +5,21 @@ subroutine solveDQ(msh,dt)
   real*8, intent(in) :: dt
   integer :: i,j
   real*8 :: dx, detM, relax
-  real*8, dimension(4) :: inVM,mass
+  real*8, dimension(msh%nshp*msh%nshp) :: mass,L,U
+  real*8, dimension(msh%nshp) :: y
   !
   do i=1,msh%nelem
-    ! Hardcoding for nshp=2 for linear advection for now
+    ! solve Ax=b problem for x
+    call lu(msh%mass,msh%nshp,L,U)
+    call backpropL(L,msh%rhs(1,:,i),msh%nshp,y)
+    call backpropU(U,y,msh%nshp,msh%dq(1,:,i))
+
+    write(*,*) ' '
+    write(*,*) 'i = ',i
+    write(*,*) 'mass = ',msh%mass(1,:,i)
+    write(*,*) 'rhs = ',msh%rhs(1,:,i)
+    write(*,*) 'dq = ',msh%dq(1,:,i)
     
-    mass = [msh%mass(1,1,1,i), msh%mass(1,1,2,i), msh%mass(1,2,1,i),msh%mass(1,2,2,i)]
-    detM = mass(1)*mass(4) - mass(2)*mass(3)
-    invM = [mass(4),-mass(2),-mass(3),mass(1)]
-    invM = invM/(1e-16+detM)
-    !msh%rhs(:,:,i) = -msh%rhs(:,:,i)
-    msh%dq(1,1,i) = invM(1)*msh%rhs(1,1,i) + invM(2)*msh%rhs(1,2,i)
-    msh%dq(1,2,i) = invM(3)*msh%rhs(1,1,i) + invM(4)*msh%rhs(1,2,i)
- 
    ! 1st order Euler in time
 !    relax = 1.0d0
 !    msh%q(1,1,i) = msh%q(1,1,i) + relax*msh%dq(1,i)*dt
