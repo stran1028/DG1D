@@ -23,7 +23,6 @@ subroutine computeRHS(msh)
 
     ! Only look at interior mesh elements, save fringes for later
     if(minval(msh%iblank(msh%e2n(:,i))).eq.1d0) then 
-      if(i.eq.39) write(*,*) 'computeRHS e39 iblank =',msh%iblank(msh%e2n(:,i))
       ! Calculate the volume integrals
       do j = 1,msh%ngauss
         call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],msh%q(1,:,i),qvals,dqvals)

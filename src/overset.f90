@@ -100,13 +100,13 @@ contains
     !
   end subroutine findIncompleteElements
   !
-  subroutine fixFluxIncompleteElements(mshB,mshA,elemInfo,nincomp)
+  subroutine fixFluxIncompleteElements(mshB,mshA,elemInfo,nincomp,consoverset)
     use bases
 
     ! Subtract half of overlap section from mesh A (stored in elemInfo)
     implicit none
     type(mesh), intent(inout) :: mshA,mshB
-    integer, intent(in) :: nincomp
+    integer, intent(in) :: nincomp,consoverset
     real*8, intent(inout) :: elemInfo(nincomp)
 !    real*8, intent(inout) :: elemInfo((3+2*msh%nshp)*nincomp)
     !
@@ -138,15 +138,21 @@ contains
              if ((x1-y1)*(x1-y2) .le. 0.0) then ! L node of mesh A is inside of mesh B elem
                ! Overlap is between x1 and y2
                ! mshA will remove first half of overlap (from x1 to 0.5*(x1+y2))
-               xcut = [x1,0.5d0*(x1+y2)]
-               xrem = [xcut(2),x2]
-               write(*,*) '  L side , eid: ',eid,xcut
-               write(*,*) '    x1,x2: ',x1,x2
-               write(*,*) '    y1,y2: ',y1,y2
-               write(*,*) '    xcut: ',xcut
-               write(*,*) '    qA: ',qA
-               write(*,*) '    qB: ',qB
-               write(*,*) '    ql,qr,flx: ',ql,qr,flx
+               if(consoverset.eq.1) then 
+                 xcut = [x1,0.5d0*(x1+y2)]
+                 xrem = [xcut(2),x2]
+               else
+                 xcut = [x1,x1]
+                 xrem = [x1,x2]
+               endif
+
+!               write(*,*) '  L side , eid: ',eid,xcut
+!               write(*,*) '    x1,x2: ',x1,x2
+!               write(*,*) '    y1,y2: ',y1,y2
+!               write(*,*) '    xcut: ',xcut
+!               write(*,*) '    qA: ',qA
+!               write(*,*) '    qB: ',qB
+!               write(*,*) '    ql,qr,flx: ',ql,qr,flx
                
                ! add intermesh flux from mesh B interior to mesh A L node
                call shapefunction(mshA%nshp,xcut(2),[x1,x2],[1d0,1d0],wtmp,dwtmp)
@@ -177,16 +183,22 @@ contains
              elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem          
                ! Overlap is between y1 and x2
                ! msh A will remove second half of overlap (from 0.5(y1+x2) to x2
-               xcut = [0.5d0*(y1+x2),x2]
-               xrem = [x1,xcut(1)]
+               if(consoverset.eq.1) then 
+                 xcut = [0.5d0*(y1+x2),x2]
+                 xrem = [x1,xcut(1)]
+               else
+                 xcut = [x2,x2]
+                 xrem = [x1,x2]
+               endif
 
-               write(*,*) '  R side eid,xcut: ',eid,xcut
-               write(*,*) '    x1,x2: ',x1,x2
-               write(*,*) '    y1,y2: ',y1,y2
-               write(*,*) '    xcut: ',xcut
-               write(*,*) '    qA: ',qA
-               write(*,*) '    qB: ',qB
-               write(*,*) '    ql,qr,flx: ',ql,qr,flx
+!               write(*,*) '  R side eid,xcut: ',eid,xcut
+!               write(*,*) '    x1,x2: ',x1,x2
+!               write(*,*) '    y1,y2: ',y1,y2
+!               write(*,*) '    xcut: ',xcut
+!               write(*,*) '    qA: ',qA
+!               write(*,*) '    qB: ',qB
+!               write(*,*) '    ql,qr,flx: ',ql,qr,flx
+
                ! Handle mesh A L node flux 
                call shapefunction(mshA%nshp,x1,[x1,x2],[1d0,1d0],wtmp,dwtmp)
                neigh = mshA%face(1,eid)
@@ -214,9 +226,9 @@ contains
 
 
              endif
-             lcut = xcut(2)-xcut(1)
+             !lcut = xcut(2)-xcut(1)
              fact = (xrem(2)-xrem(1))/(x2-x1)
-             xc = 0.5*(xcut(1)+xcut(2))   ! center of section to be removed
+             !xc = 0.5*(xcut(1)+xcut(2))   ! center of section to be removed
                
              dvol = 0d0
              ! Compute volume integral over partial element 
@@ -234,10 +246,12 @@ contains
 
                enddo ! nshp
              enddo ! ngauss
-             write(*,*) '    xrem: ',xrem
-             write(*,*) '    rhsV 2: ',mshA%rhsV(1,:,eid)
-             write(*,*) '    rhsF 2: ',mshA%rhsF(1,:,eid)
-             write(*,*) '    rhs2 = ',mshA%rhs(1,:,eid)
+
+!             write(*,*) '    xrem: ',xrem
+!             write(*,*) '    rhsV 2: ',mshA%rhsV(1,:,eid)
+!             write(*,*) '    rhsF 2: ',mshA%rhsF(1,:,eid)
+!             write(*,*) '    rhs2 = ',mshA%rhs(1,:,eid)
+
              cycle iloop
           endif
        enddo eloop
