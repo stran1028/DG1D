@@ -1,4 +1,0 @@
-- add rk iterative solver for burgers
-- try high order shp functions
-- figure out oversetting fixing
-- create subroutine to calculate shape functions at arbitrary locations
