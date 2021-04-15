@@ -15,15 +15,15 @@ program conservative_overset
   type(mesh), allocatable :: msh(:)
   allocate(msh(nmesh))
   !
-  ntime= 4000 ! 4000
-  dt=.1d0 !0.010471975511966d0 !0.05d0/3d0
+  ntime= 10
+  dt=.05d0 !0.010471975511966d0 !0.05d0/3d0
   rk = [1d0/4d0, 8d0/15d0,5d0/12d0, 3d0/4d0];
   !
   ! Set up the problem and bases types
   call set_type('linear_advection',1d0)
   !call set_type('burgers')
-!  call setshp('lagrange')
-  call setshp('legendre')
+  call setshp('lagrange')
+!  call setshp('legendre')
   !
   ! Initialize the mesh(es)
 !call init_mesh(msh(1),[0d0,6.28318530717959d0],0.314159265358979d0,1)
@@ -31,7 +31,7 @@ program conservative_overset
 
   order = 1
   call init_mesh(msh(1),[-100d0,100d0],1d0,1,order)
-  call init_mesh(msh(2),[-10.1d0,20.6d0],0.5d0,0,order)
+  call init_mesh(msh(2),[0.75d0,20.75d0],0.5d0,0,order)
 ! call init_mesh(msh(2),[-15.5d0,50.5d0],2d0,0)
   !
   do n=1,nmesh
@@ -65,23 +65,36 @@ program conservative_overset
    write(*,*) '==================='
    
    ! RK step 1
+!write(*,*) ' ' 
+!write(*,*) 'rk step 1'
+
    call timestep(nmesh,dt,msh)
    do j = 1,nmesh
-     msh(j)%q=msh(j)%sol+rk(2)*dt*msh(j)%dq
-     msh(j)%sol=msh(j)%sol+rk(1)*dt*msh(j)%dq
+     ! Euler 1st order
+     msh(j)%q=msh(j)%q+dt*msh(j)%dq
+     msh(j)%sol=msh(j)%q
+
+!     msh(j)%q=msh(j)%sol+rk(2)*dt*msh(j)%dq
+!     msh(j)%sol=msh(j)%sol+rk(1)*dt*msh(j)%dq
    enddo
+
+!write(*,*) ' ' 
+!write(*,*) 'rk step 2'
 
    ! RK step 2
-   call timestep(nmesh,dt,msh)
+!   call timestep(nmesh,dt,msh)
    do j = 1,nmesh
-     msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
+!     msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
    enddo
 
+!write(*,*) ' ' 
+!write(*,*) 'rk step 3'
+
    ! RK step 3
-   call timestep(nmesh,dt,msh)
+!   call timestep(nmesh,dt,msh)
    do j = 1,nmesh
-     msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
-     msh(j)%q = msh(j)%sol
+!     msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
+!     msh(j)%q = msh(j)%sol
    enddo
 
   end do ! timesteps

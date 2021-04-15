@@ -114,9 +114,7 @@ contains
     real*8 :: x1,x2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp)
     real*8 :: xcut(2),xc,lcut,xg,vol,flx,ql,qr
     real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp)
-    real*8 :: qtmp(mshA%nshp),dqtmp(mshA%nshp),dq
-
-!!! XXX add in volume and flux integral for the overset element here
+    real*8 ::qtmp(mshA%nshp),dqtmp(mshA%nshp),dq,dvol(mshA%nshp),dflx(mshA%nshp)
 
     !
     ! elemInfo = incomplete elements on mesh A
@@ -143,16 +141,31 @@ contains
                xcut = [x1,0.5d0*(x1+y2)]
                
                ! add intermesh flux from mesh B interior to mesh A L node
-               call shapefunction(mshA%nshp,-0.5d0,[-0.5d0,0.5d0],[1d0,1d0],qtmp,dqtmp)
-               wtmp = qtmp
-               call shapefunction(mshB%nshp,x1,[y1,y2],qB,qtmp,dqtmp)
+               call shapefunction(mshA%nshp,xcut(2),[x1,x2],[1d0,1d0],wtmp,dwtmp)
+!               call shapefunction(mshB%nshp,x1,[y1,y2],qB,qtmp,dqtmp)
+               call shapefunction(mshB%nshp,xcut(2),[y1,y2],qB,qtmp,dqtmp)
                qL = sum(qtmp)
-               call shapefunction(mshA%nshp,x1,[x1,x2],qA,qtmp,dqtmp)
+!               call shapefunction(mshA%nshp,x1,[x1,x2],qA,qtmp,dqtmp)
+               call shapefunction(mshA%nshp,xcut(2),[x1,x2],qA,qtmp,dqtmp)
                qR = sum(qtmp)
                call flux(ql,qr,flx)
+               write(*,*) '  L side eid: ',eid
+               write(*,*) '    x1,x2: ',x1,x2
+               write(*,*) '    y1,y2: ',y1,y2
+               write(*,*) '    xcut: ',xcut
+               write(*,*) '    qA: ',qA
+               write(*,*) '    qB: ',qB
+               write(*,*) '    ql,qr,flx: ',ql,qr,flx
+               write(*,*) '    rhsV 1: ',mshA%rhsV(1,:,eid)
+               write(*,*) '    rhsF 1: ',mshA%rhsF(1,:,eid)
+               write(*,*) '    rhs 1: ',mshA%rhs(1,:,eid)
+               dflx = 0d0
                do k = 1,mshA%nshp
+                 dflx(k)= dflx(k)+ wtmp(k)*flx
                  mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) + wtmp(k)*flx
                enddo
+               write(*,*) '    dflx: ',dflx
+             
 
              elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R ndoe of mesh A is inside of mesh B elem          
                ! Overlap is between y1 and x2
@@ -160,38 +173,59 @@ contains
                xcut = [0.5d0*(y1+x2),x2]
 
                ! add intermesh flux from mesh B interior to mesh A R node
-               call shapefunction(mshA%nshp,0.5d0,[-0.5d0,0.5d0],[1d0,1d0],qtmp,dqtmp)
-               wtmp = qtmp
-               call shapefunction(mshB%nshp,x2,[y1,y2],qB,qtmp,dqtmp)
+               call shapefunction(mshA%nshp,xcut(1),[x1,x2],[1d0,1d0],wtmp,dwtmp)
+!               call shapefunction(mshB%nshp,x2,[y1,y2],qB,qtmp,dqtmp)
+               call shapefunction(mshB%nshp,xcut(1),[y1,y2],qB,qtmp,dqtmp)
                qR = sum(qtmp)
-               call shapefunction(mshA%nshp,x2,[x1,x2],qA,qtmp,dqtmp)
+!               call shapefunction(mshA%nshp,x2,[x1,x2],qA,qtmp,dqtmp)
+               call shapefunction(mshA%nshp,xcut(1),[x1,x2],qA,qtmp,dqtmp)
                qL = sum(qtmp)
                call flux(ql,qr,flx)
+               write(*,*) '  R side eid,xcut: ',eid,xcut
+               write(*,*) '    x1,x2: ',x1,x2
+               write(*,*) '    y1,y2: ',y1,y2
+               write(*,*) '    xcut: ',xcut
+               write(*,*) '    qA: ',qA
+               write(*,*) '    qB: ',qB
+               write(*,*) '    ql,qr,flx: ',ql,qr,flx
+               write(*,*) '    rhsV 1: ',mshA%rhsV(1,:,eid)
+               write(*,*) '    rhsF 1: ',mshA%rhsF(1,:,eid)
+               write(*,*) '    rhs 1: ',mshA%rhs(1,:,eid)
+               dflx = 0d0
                do k = 1,mshA%nshp
+                 dflx(k) = dflx(k) - wtmp(k)*flx
                  mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) - wtmp(k)*flx
                enddo
+               write(*,*) '    dflx: ',dflx
 
              endif
              lcut = xcut(2)-xcut(1)
              xc = 0.5*(xcut(1)+xcut(2))   ! center of section to be removed
                
-             ! Adjust mass matrix and volume integral
+             dvol = 0d0
+             ! Adjust volume integral
              do aa = 1,mshA%ngauss
                ! get shapefunction from msh A at quad pts of cut section
                xg = mshA%xgauss(aa)*lcut+xc
                call shapefunction(mshA%nshp,xg,[x1,x2],[1d0,1d0],wtmp,dwtmp)
                call shapefunction(mshA%nshp,xg,[x1,x2],qA,qtmp,dqtmp)
+               call volint(sum(qtmp),vol)
                do bb = 1,mshA%nshp
                  ! Volume Integral
                  ! Remove int(w u,x dx) 
                  ! Note that we are removing the original volume integral
                  ! (before integration by parts) since it's easier and 
                  ! mathematically the same 
-                 call volint(sum(dqtmp),vol)
-                 mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) + wtmp(bb)*vol*mshA%wgauss(aa)*lcut/mshA%dx(eID) ! scale gauss weights by cut length in parent element
+!                 call volint(sum(dqtmp),vol)
+!                 mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) + wtmp(bb)*vol*mshA%wgauss(aa)*lcut/mshA%dx(eID) ! scale gauss weights by cut length in parent element
+
+                 dvol(bb) = dvol(bb) - dwtmp(bb)*vol*mshA%wgauss(aa)*lcut/mshA%dx(eID)
+                 mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) - dwtmp(bb)*vol*mshA%wgauss(aa)*lcut/mshA%dx(eID) ! scale gauss weights by cut length in parent element
 
                enddo ! nshp
              enddo ! ngauss
+             write(*,*) '    dvol = ',dvol
+             write(*,*) '    rhs2 = ',mshA%rhs(1,:,eid)
              cycle iloop
           endif
        enddo eloop
@@ -245,7 +279,7 @@ contains
              lcut = xcut(2)-xcut(1)
              xc = 0.5*(xcut(1)+xcut(2))   ! center of section to be removed
                
-             ! Adjust mass matrix and volume integral
+             ! Adjust mass matrix 
              do aa = 1,mshA%ngauss
                ! get shapefunction from msh A at quad pts of cut section
                xg = mshA%xgauss(aa)*lcut+xc

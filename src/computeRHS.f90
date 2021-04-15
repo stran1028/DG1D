@@ -14,6 +14,8 @@ subroutine computeRHS(msh)
   !
   ! rhs = (msh%nfields,msh%nshp,msh%nelem)
   msh%rhs=0d0
+  msh%rhsV=0d0
+  msh%rhsF=0d0
   !
   do i = 1,msh%nelem
     e1=msh%face(1,i)
@@ -27,6 +29,7 @@ subroutine computeRHS(msh)
          call volint(qtmp,vol)
          vol = vol*msh%dshp(j,k)*msh%wgauss(j)
          msh%rhs(1,k,i) = msh%rhs(1,k,i) + vol 
+         msh%rhsV(1,k,i) = msh%rhsV(1,k,i) + vol 
       enddo 
     enddo
     !
@@ -46,6 +49,7 @@ subroutine computeRHS(msh)
         if ((msh%iblank(msh%e2n(2,e1)) > 0).and.(e1.ne.i)) then 
           do j = 1,msh%nshp
             msh%rhs(:,j,i) = msh%rhs(:,j,i) + w(j)*flx
+            msh%rhsF(:,j,i) = msh%rhsF(:,j,i) + w(j)*flx
           enddo
         endif
         
@@ -60,6 +64,7 @@ subroutine computeRHS(msh)
         if ((msh%iblank(msh%e2n(1,e2)) > 0).and.(e2.ne.i)) then 
           do j = 1,msh%nshp
             msh%rhs(:,j,i) = msh%rhs(:,j,i) - w(j)*flx
+            msh%rhsF(:,j,i) = msh%rhsF(:,j,i) - w(j)*flx
           enddo
         endif
     endif
