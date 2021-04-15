@@ -11,4 +11,9 @@ In FEM there will be an error in the interpolation of u ~ sum(NA*NB*uhat) based 
 
 When we do the conservative overset, we have to compute the volume and flux integrals twice. It seems that doing so creates a RHS that is more off than what you would get from just doing the integral once. 
 
-Sothe solution to this may be to just skip the fringe elements on the first pass and do then go back and do just the single integral over the partial element at the end. That way I'm not doing double integration and inccuring error twice. 
+Sothe solution to this may be to just skip the fringe elements on the first pass and do then go back and do just the single integral over the partial element at the end. That way I'm not doing double integration and inccuring error twice.
+
+---
+
+
+Actually I'm seeing the error even if we do only 1 integration. Maybe the error is coming from interpolating within the current element? That's where the error would be the largest? Need to think about this more. 

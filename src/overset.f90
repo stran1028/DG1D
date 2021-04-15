@@ -110,9 +110,9 @@ contains
     real*8, intent(inout) :: elemInfo(nincomp)
 !    real*8, intent(inout) :: elemInfo((3+2*msh%nshp)*nincomp)
     !
-    integer :: i,j,k,e,nrows,aa,bb,cc,eid
+    integer :: i,j,k,e,nrows,aa,bb,cc,eid,neigh
     real*8 :: x1,x2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp)
-    real*8 :: xcut(2),xc,lcut,xg,vol,flx,ql,qr
+    real*8 :: xrem(2),xcut(2),xc,lcut,xg,vol,flx,qL,qR,fact
     real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp)
     real*8 ::qtmp(mshA%nshp),dqtmp(mshA%nshp),dq,dvol(mshA%nshp),dflx(mshA%nshp)
 
@@ -139,48 +139,47 @@ contains
                ! Overlap is between x1 and y2
                ! mshA will remove first half of overlap (from x1 to 0.5*(x1+y2))
                xcut = [x1,0.5d0*(x1+y2)]
-               
-               ! add intermesh flux from mesh B interior to mesh A L node
-               call shapefunction(mshA%nshp,xcut(2),[x1,x2],[1d0,1d0],wtmp,dwtmp)
-!               call shapefunction(mshB%nshp,x1,[y1,y2],qB,qtmp,dqtmp)
-               call shapefunction(mshB%nshp,xcut(2),[y1,y2],qB,qtmp,dqtmp)
-               qL = sum(qtmp)
-!               call shapefunction(mshA%nshp,x1,[x1,x2],qA,qtmp,dqtmp)
-               call shapefunction(mshA%nshp,xcut(2),[x1,x2],qA,qtmp,dqtmp)
-               qR = sum(qtmp)
-               call flux(ql,qr,flx)
-               write(*,*) '  L side eid: ',eid
+               xrem = [xcut(2),x2]
+               write(*,*) '  L side , eid: ',eid,xcut
                write(*,*) '    x1,x2: ',x1,x2
                write(*,*) '    y1,y2: ',y1,y2
                write(*,*) '    xcut: ',xcut
                write(*,*) '    qA: ',qA
                write(*,*) '    qB: ',qB
                write(*,*) '    ql,qr,flx: ',ql,qr,flx
-               write(*,*) '    rhsV 1: ',mshA%rhsV(1,:,eid)
-               write(*,*) '    rhsF 1: ',mshA%rhsF(1,:,eid)
-               write(*,*) '    rhs 1: ',mshA%rhs(1,:,eid)
-               dflx = 0d0
+               
+               ! add intermesh flux from mesh B interior to mesh A L node
+               call shapefunction(mshA%nshp,xcut(2),[x1,x2],[1d0,1d0],wtmp,dwtmp)
+               call shapefunction(mshB%nshp,xcut(2),[y1,y2],qB,qtmp,dqtmp)
+               qL = sum(qtmp)
+               call shapefunction(mshA%nshp,xcut(2),[x1,x2],qA,qtmp,dqtmp)
+               qR = sum(qtmp)
+               call flux(qL,qR,flx)
                do k = 1,mshA%nshp
-                 dflx(k)= dflx(k)+ wtmp(k)*flx
+                 mshA%rhsF(:,k,eid)= mshA%rhsF(:,k,eid) + wtmp(k)*flx
                  mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) + wtmp(k)*flx
                enddo
-               write(*,*) '    dflx: ',dflx
-             
 
-             elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R ndoe of mesh A is inside of mesh B elem          
+               ! Handle mesh A R node flux
+               call shapefunction(mshA%nshp,x2,[x1,x2],[1d0,1d0],wtmp,dwtmp)
+               neigh = mshA%face(2,eid)
+               call shapefunction(mshA%nshp,x2,[x1,x2],qA,qtmp,dqtmp)
+               qL = sum(qtmp)
+               call shapefunction(mshA%nshp,x2,mshA%x(mshA%e2n(:,neigh)),mshA%q(1,:,neigh),qtmp,dqtmp)
+               qR = sum(qtmp)
+               call flux(qL,qR,flx)
+               do k = 1,mshA%nshp
+                 mshA%rhsF(:,k,eid)= mshA%rhsF(:,k,eid) - wtmp(k)*flx
+                 mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) - wtmp(k)*flx
+               enddo
+
+
+             elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem          
                ! Overlap is between y1 and x2
                ! msh A will remove second half of overlap (from 0.5(y1+x2) to x2
                xcut = [0.5d0*(y1+x2),x2]
+               xrem = [x1,xcut(1)]
 
-               ! add intermesh flux from mesh B interior to mesh A R node
-               call shapefunction(mshA%nshp,xcut(1),[x1,x2],[1d0,1d0],wtmp,dwtmp)
-!               call shapefunction(mshB%nshp,x2,[y1,y2],qB,qtmp,dqtmp)
-               call shapefunction(mshB%nshp,xcut(1),[y1,y2],qB,qtmp,dqtmp)
-               qR = sum(qtmp)
-!               call shapefunction(mshA%nshp,x2,[x1,x2],qA,qtmp,dqtmp)
-               call shapefunction(mshA%nshp,xcut(1),[x1,x2],qA,qtmp,dqtmp)
-               qL = sum(qtmp)
-               call flux(ql,qr,flx)
                write(*,*) '  R side eid,xcut: ',eid,xcut
                write(*,*) '    x1,x2: ',x1,x2
                write(*,*) '    y1,y2: ',y1,y2
@@ -188,43 +187,56 @@ contains
                write(*,*) '    qA: ',qA
                write(*,*) '    qB: ',qB
                write(*,*) '    ql,qr,flx: ',ql,qr,flx
-               write(*,*) '    rhsV 1: ',mshA%rhsV(1,:,eid)
-               write(*,*) '    rhsF 1: ',mshA%rhsF(1,:,eid)
-               write(*,*) '    rhs 1: ',mshA%rhs(1,:,eid)
-               dflx = 0d0
+               ! Handle mesh A L node flux 
+               call shapefunction(mshA%nshp,x1,[x1,x2],[1d0,1d0],wtmp,dwtmp)
+               neigh = mshA%face(1,eid)
+               call shapefunction(mshA%nshp,x1,mshA%x(mshA%e2n(:,neigh)),mshA%q(1,:,neigh),qtmp,dqtmp)
+               qL = sum(qtmp)
+               call shapefunction(mshA%nshp,x1,[x1,x2],qA,qtmp,dqtmp)
+               qR = sum(qtmp)
+               call flux(qL,qR,flx)
                do k = 1,mshA%nshp
-                 dflx(k) = dflx(k) - wtmp(k)*flx
+                 mshA%rhsF(:,k,eid)= mshA%rhsF(:,k,eid) + wtmp(k)*flx
+                 mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) + wtmp(k)*flx
+               enddo
+
+               ! add intermesh flux from mesh B interior to mesh A R node
+               call shapefunction(mshA%nshp,xcut(1),[x1,x2],[1d0,1d0],wtmp,dwtmp)
+               call shapefunction(mshB%nshp,xcut(1),[y1,y2],qB,qtmp,dqtmp)
+               qR = sum(qtmp)
+               call shapefunction(mshA%nshp,xcut(1),[x1,x2],qA,qtmp,dqtmp)
+               qL = sum(qtmp)
+               call flux(ql,qr,flx)
+               do k = 1,mshA%nshp
+                 mshA%rhsF(:,k,eid) = mshA%rhsF(:,k,eid) - wtmp(k)*flx
                  mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) - wtmp(k)*flx
                enddo
-               write(*,*) '    dflx: ',dflx
+
 
              endif
              lcut = xcut(2)-xcut(1)
+             fact = (xrem(2)-xrem(1))/(x2-x1)
              xc = 0.5*(xcut(1)+xcut(2))   ! center of section to be removed
                
              dvol = 0d0
-             ! Adjust volume integral
+             ! Compute volume integral over partial element 
              do aa = 1,mshA%ngauss
-               ! get shapefunction from msh A at quad pts of cut section
-               xg = mshA%xgauss(aa)*lcut+xc
+               ! get shapefunction from msh A at quad pts of remaining element
+               xg = mshA%xgauss(aa)*(xrem(2)-xrem(1))+0.5d0*(xrem(2)+xrem(1))
+
                call shapefunction(mshA%nshp,xg,[x1,x2],[1d0,1d0],wtmp,dwtmp)
                call shapefunction(mshA%nshp,xg,[x1,x2],qA,qtmp,dqtmp)
                call volint(sum(qtmp),vol)
                do bb = 1,mshA%nshp
                  ! Volume Integral
-                 ! Remove int(w u,x dx) 
-                 ! Note that we are removing the original volume integral
-                 ! (before integration by parts) since it's easier and 
-                 ! mathematically the same 
-!                 call volint(sum(dqtmp),vol)
-!                 mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) + wtmp(bb)*vol*mshA%wgauss(aa)*lcut/mshA%dx(eID) ! scale gauss weights by cut length in parent element
-
-                 dvol(bb) = dvol(bb) - dwtmp(bb)*vol*mshA%wgauss(aa)*lcut/mshA%dx(eID)
-                 mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) - dwtmp(bb)*vol*mshA%wgauss(aa)*lcut/mshA%dx(eID) ! scale gauss weights by cut length in parent element
+                 mshA%rhsV(:,bb,eid) = mshA%rhsV(:,bb,eid) +mshA%wgauss(aa)*dwtmp(bb)*fact*vol!
+                 mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) + dwtmp(bb)*vol*(mshA%wgauss(aa)*fact) ! scale gauss weights by length of remaining element parent
 
                enddo ! nshp
              enddo ! ngauss
-             write(*,*) '    dvol = ',dvol
+             write(*,*) '    xrem: ',xrem
+             write(*,*) '    rhsV 2: ',mshA%rhsV(1,:,eid)
+             write(*,*) '    rhsF 2: ',mshA%rhsF(1,:,eid)
              write(*,*) '    rhs2 = ',mshA%rhs(1,:,eid)
              cycle iloop
           endif

@@ -20,24 +20,24 @@ subroutine computeRHS(msh)
   do i = 1,msh%nelem
     e1=msh%face(1,i)
     e2=msh%face(2,i)
-    ! Calculate the volume integrals
-    ! For Fringe elements, do the volume integral but not fluxes
-    do j = 1,msh%ngauss
-      call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],msh%q(1,:,i),qvals,dqvals)
-      qtmp = SUM(qvals)
-      do k = 1,msh%nshp
-         call volint(qtmp,vol)
-         vol = vol*msh%dshp(j,k)*msh%wgauss(j)
-         msh%rhs(1,k,i) = msh%rhs(1,k,i) + vol 
-         msh%rhsV(1,k,i) = msh%rhsV(1,k,i) + vol 
-      enddo 
-    enddo
-    !
-    ! Calculate the fluxes within current mesh
-    ! For fringe elements where flux comes from other mesh, 
-    ! intermesh fluxes done in overset routines
-    if (e1.ne.e2) then
 
+    ! Only look at interior mesh elements, save fringes for later
+    if(minval(msh%iblank(msh%e2n(:,i))).eq.1d0) then 
+      if(i.eq.39) write(*,*) 'computeRHS e39 iblank =',msh%iblank(msh%e2n(:,i))
+      ! Calculate the volume integrals
+      do j = 1,msh%ngauss
+        call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],msh%q(1,:,i),qvals,dqvals)
+        qtmp = SUM(qvals)
+        do k = 1,msh%nshp
+           call volint(qtmp,vol)
+           vol = vol*msh%dshp(j,k)*msh%wgauss(j)
+           msh%rhs(1,k,i) = msh%rhs(1,k,i) + vol 
+           msh%rhsV(1,k,i) = msh%rhsV(1,k,i) + vol 
+        enddo 
+      enddo
+      !
+      ! Calculate the fluxes within current mesh
+      if (e1.ne.e2) then
         ! Left flux boundary        
         call shapefunction(msh%nshp,-0.5d0,[-0.5d0,0.5d0],[1d0,1d0],qvals,dqvals)
         w = qvals
@@ -46,12 +46,10 @@ subroutine computeRHS(msh)
         call shapefunction(msh%nshp,msh%xe(1,i),msh%xe(:,i),msh%q(1,:,i),qvals,dqvals)
         qr = sum(qvals)
         call flux(ql,qr,flx)
-        if ((msh%iblank(msh%e2n(2,e1)) > 0).and.(e1.ne.i)) then 
-          do j = 1,msh%nshp
+        do j = 1,msh%nshp
             msh%rhs(:,j,i) = msh%rhs(:,j,i) + w(j)*flx
             msh%rhsF(:,j,i) = msh%rhsF(:,j,i) + w(j)*flx
-          enddo
-        endif
+        enddo
         
         ! Right flux boundary
         call shapefunction(msh%nshp,0.5d0,[-0.5d0,0.5d0],[1d0,1d0],qvals,dqvals)
@@ -61,13 +59,13 @@ subroutine computeRHS(msh)
         call shapefunction(msh%nshp,msh%xe(1,e2),msh%xe(:,e2),msh%q(1,:,e2),qvals,dqvals)
         qr = sum(qvals)
         call flux(ql,qr,flx)
-        if ((msh%iblank(msh%e2n(1,e2)) > 0).and.(e2.ne.i)) then 
-          do j = 1,msh%nshp
+        do j = 1,msh%nshp
             msh%rhs(:,j,i) = msh%rhs(:,j,i) - w(j)*flx
             msh%rhsF(:,j,i) = msh%rhsF(:,j,i) - w(j)*flx
-          enddo
-        endif
-    endif
+        enddo
+      endif ! e1 ne e2
+    endif ! iblank 
+
   enddo
   !
   !iout=iout+1

@@ -15,7 +15,7 @@ program conservative_overset
   type(mesh), allocatable :: msh(:)
   allocate(msh(nmesh))
   !
-  ntime= 10
+  ntime= 4000
   dt=.05d0 !0.010471975511966d0 !0.05d0/3d0
   rk = [1d0/4d0, 8d0/15d0,5d0/12d0, 3d0/4d0];
   !
@@ -71,11 +71,11 @@ program conservative_overset
    call timestep(nmesh,dt,msh)
    do j = 1,nmesh
      ! Euler 1st order
-     msh(j)%q=msh(j)%q+dt*msh(j)%dq
-     msh(j)%sol=msh(j)%q
+!     msh(j)%q=msh(j)%q+dt*msh(j)%dq
+!     msh(j)%sol=msh(j)%q
 
-!     msh(j)%q=msh(j)%sol+rk(2)*dt*msh(j)%dq
-!     msh(j)%sol=msh(j)%sol+rk(1)*dt*msh(j)%dq
+     msh(j)%q=msh(j)%sol+rk(2)*dt*msh(j)%dq
+     msh(j)%sol=msh(j)%sol+rk(1)*dt*msh(j)%dq
    enddo
 
 !write(*,*) ' ' 
@@ -84,17 +84,17 @@ program conservative_overset
    ! RK step 2
 !   call timestep(nmesh,dt,msh)
    do j = 1,nmesh
-!     msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
+     msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
    enddo
 
 !write(*,*) ' ' 
 !write(*,*) 'rk step 3'
 
-   ! RK step 3
-!   call timestep(nmesh,dt,msh)
+  ! RK step 3
+   call timestep(nmesh,dt,msh)
    do j = 1,nmesh
-!     msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
-!     msh(j)%q = msh(j)%sol
+     msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
+     msh(j)%q = msh(j)%sol
    enddo
 
   end do ! timesteps

@@ -85,7 +85,7 @@ contains
 !        q = sin(x)
 !       q=exp(-20*x*x)
 !       if (abs(x) > 0.8d0) q=0d0
-       q=x*x !exp(-0.01*x*x)
+       q=exp(-0.01*x*x)
        if (abs(x) > 40d0) q=0d0
     endif
   end subroutine initq
