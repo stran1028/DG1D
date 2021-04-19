@@ -59,7 +59,7 @@ contains
       enddo
 
       ! solve the elementary system for u
-      call lu(msh%mass,msh%nshp,L,U)
+      call lu(msh%mass(1,:,i),msh%nshp,L,U)
       call forwprop(L,f,msh%nshp,y)
       call backprop(U,y,msh%nshp,msh%q(1,:,i))
 

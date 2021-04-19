@@ -10,7 +10,7 @@ subroutine solveDQ(msh,dt)
   !
   do i=1,msh%nelem
     ! solve Ax=b problem for x
-    call lu(msh%mass,msh%nshp,L,U)
+    call lu(msh%mass(1,:,i),msh%nshp,L,U)
     call forwprop(L,msh%rhs(1,:,i),msh%nshp,y)
     call backprop(U,y,msh%nshp,msh%dq(1,:,i))
 
