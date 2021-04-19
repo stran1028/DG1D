@@ -14,7 +14,7 @@ subroutine initvar(msh)
      dx=msh%xe(2,i)-msh%xe(1,i)
      do j=1,msh%nshp
         !xx=xc+msh%xgauss(j)*dx
-        xx = msh%xe(j,i)    
+        xx = msh%x(msh%e2n(j,i))
         if(shptype.eq.'legendre') then 
           call initqleg(msh)
         else 

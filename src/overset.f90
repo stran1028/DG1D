@@ -8,21 +8,25 @@ contains
     type(mesh), intent(inout) :: msh1
     type(mesh), intent(in)    :: msh2
     !
-    integer :: i,j
+    integer :: i,j,aa,bb,index1
     real*8  :: dx
     !
     ! brute force now 
     !
-    do i=1,msh1%nnodes
+    !do i=1,msh1%nnodes
+    do aa = 1,msh1%nelem
+    do bb = 1,2
        do j=1,msh2%nelem
-          if (msh2%xe(2,j) .ge. msh1%x(i) .and. &
-               msh2%xe(1,j) .le. msh1%x(i)) then
+          if (msh2%xe(2,j) .ge. msh1%xe(bb,aa) .and. &
+               msh2%xe(1,j) .le. msh1%xe(bb,aa)) then
              dx=msh2%xe(2,j)-msh2%xe(1,j)
-             if (msh1%nres(i) > dx) then ! blank out cells where m2 is finer
-                msh1%iblank(i)=-1
+             index1 = 2*(aa-1)+bb
+             if (msh1%nres(index1) > dx) then ! blank out cells where m2 is finer
+                msh1%iblank(bb,aa)=-1
              endif
           endif
        enddo
+    enddo
     enddo
   end subroutine connect
   !
@@ -33,26 +37,29 @@ contains
     type(mesh), intent(inout) :: msh1
     type(mesh), intent(in) :: msh2
     !
-    integer :: i,j,ib1,ib2,ip
+    integer :: i,j,ib1,ib2,ip,aa,bb
     real*8 :: x1,y1,y2
     real*8 :: TOL=1e-8
     integer, parameter :: npass=2
     !
     do ip=1,npass
-    m1loop: do i=1,msh1%nnodes
-       if (msh1%iblank(i) .ne. 1) cycle m1loop  ! skip blanked nodes
-       x1=msh1%x(i)                             ! grab m1 node x coord
-       m2loop:do j=1,msh2%nelem
-          ib1=msh2%iblank(msh2%e2n(1,j))        ! grab left m2 node
-          ib2=msh2%iblank(msh2%e2n(2,j))        ! grab right m2 node
-          if (ib1*ib2 > 0 ) cycle m2loop ! skip if either nodes are iblanked 
-          y1=msh2%xe(1,j)       ! grab left m2 x coord
-          y2=msh2%xe(2,j)       ! grab right m2 x coord
-          if ((x1-y1)*(x1-y2) < TOL) then       ! blank m1 node if they're close to overlapping m2 nodes
-             msh1%iblank(i)=-1
-             cycle m1loop               ! skip the rest of the m2 nodes
-          endif
-       end do m2loop
+!    m1loop: do i=1,msh1%nnodes
+    m1loop: do aa=1,msh1%nelem
+       do bb = 1,2
+         if (msh1%iblank(bb,aa) .ne. 1) cycle m1loop  ! skip blanked nodes
+         x1=msh1%xe(bb,aa)                             ! grab m1 node x coord
+         m2loop:do j=1,msh2%nelem
+            ib1=msh2%iblank(1,j)        ! grab left m2 node
+            ib2=msh2%iblank(2,j)        ! grab right m2 node
+            if (ib1*ib2 > 0 ) cycle m2loop ! skip if either nodes are iblanked 
+            y1=msh2%xe(1,j)       ! grab left m2 x coord
+            y2=msh2%xe(2,j)       ! grab right m2 x coord
+            if ((x1-y1)*(x1-y2) < TOL) then       ! blank m1 node if they're close to overlapping m2 nodes
+               msh1%iblank(bb,aa)=-1
+               cycle m1loop               ! skip the rest of the m2 nodes
+            endif
+         end do m2loop
+      enddo
     enddo m1loop
     enddo
   end subroutine fixOverlap       
@@ -70,10 +77,10 @@ contains
     !
     ! find number of elems with only one blanked node
     do i=1,msh%nelem
-       n1=msh%e2n(1,i) ! left elem node number
-       n2=msh%e2n(2,i) ! right elem node number
-       ib1=msh%iblank(n1)
-       ib2=msh%iblank(n2)
+!       n1=msh%e2n(1,i) ! left elem node number
+!       n2=msh%e2n(msh%nshp,i) ! right elem node number
+       ib1=msh%iblank(1,i)
+       ib2=msh%iblank(2,i)
        if ( ib1*ib2 .le. 0) then
           nincomp=nincomp+1
        endif
@@ -88,10 +95,10 @@ contains
 !    k=0
     k = 1
     do i=1,msh%nelem
-       n1=msh%e2n(1,i)
-       n2=msh%e2n(2,i)
-       ib1=msh%iblank(n1)
-       ib2=msh%iblank(n2)
+!       n1=msh%e2n(1,i)
+!       n2=msh%e2n(msh%nshp,i)
+       ib1=msh%iblank(1,i)
+       ib2=msh%iblank(2,i)
        if ( ib1*ib2 .le. 0) then
           elemInfo(k) = i
           k=k+1
@@ -131,8 +138,8 @@ contains
           if (x1 > y2 .or. x2 < y1) then ! skip if not overlapping
              cycle eloop
           else
-	     if (mshB%iblank(mshB%e2n(1,j)) .ne.1 .and. &
-                 mshB%iblank(mshB%e2n(2,j)) .ne.1) cycle eloop ! skip if incomplete mesh B elem
+	     if (mshB%iblank(1,j) .ne.1 .and. &
+                 mshB%iblank(2,j) .ne.1) cycle eloop ! skip if incomplete mesh B elem
              qB=mshB%q(1,:,j)
 
              if ((x1-y1)*(x1-y2) .le. 0.0) then ! L node of mesh A is inside of mesh B elem
@@ -146,16 +153,17 @@ contains
                  xrem = [x1,x2]
                endif
 
-!               write(*,*) '  L side , eid: ',eid,xcut
-!               write(*,*) '    x1,x2: ',x1,x2
-!               write(*,*) '    y1,y2: ',y1,y2
-!               write(*,*) '    xcut: ',xcut
-!               write(*,*) '    qA: ',qA
-!               write(*,*) '    qB: ',qB
-!               write(*,*) '    ql,qr,flx: ',ql,qr,flx
+               write(*,*) '  L side , eid: ',eid,xcut
+               write(*,*) '    x1,x2: ',x1,x2
+               write(*,*) '    y1,y2: ',y1,y2
+               write(*,*) '    xcut: ',xcut
+               write(*,*) '    qA: ',qA
+               write(*,*) '    qB: ',qB
+               write(*,*) '    ql,qr,flx: ',ql,qr,flx
                
                ! add intermesh flux from mesh B interior to mesh A L node
-               call shapefunction(mshA%nshp,xcut(2),[x1,x2],[1d0,1d0],wtmp,dwtmp)
+               wtmp = 1d0
+               call shapefunction(mshA%nshp,xcut(2),[x1,x2],wtmp,wtmp,dwtmp)
                call shapefunction(mshB%nshp,xcut(2),[y1,y2],qB,qtmp,dqtmp)
                qL = sum(qtmp)
                call shapefunction(mshA%nshp,xcut(2),[x1,x2],qA,qtmp,dqtmp)
@@ -167,11 +175,12 @@ contains
                enddo
 
                ! Handle mesh A R node flux
-               call shapefunction(mshA%nshp,x2,[x1,x2],[1d0,1d0],wtmp,dwtmp)
+               wtmp = 1d0
+               call shapefunction(mshA%nshp,x2,[x1,x2],wtmp,wtmp,dwtmp)
                neigh = mshA%face(2,eid)
                call shapefunction(mshA%nshp,x2,[x1,x2],qA,qtmp,dqtmp)
                qL = sum(qtmp)
-               call shapefunction(mshA%nshp,x2,mshA%x(mshA%e2n(:,neigh)),mshA%q(1,:,neigh),qtmp,dqtmp)
+               call shapefunction(mshA%nshp,x2,mshA%xe(:,neigh),mshA%q(1,:,neigh),qtmp,dqtmp)
                qR = sum(qtmp)
                call flux(qL,qR,flx)
                do k = 1,mshA%nshp
@@ -191,18 +200,19 @@ contains
                  xrem = [x1,x2]
                endif
 
-!               write(*,*) '  R side eid,xcut: ',eid,xcut
-!               write(*,*) '    x1,x2: ',x1,x2
-!               write(*,*) '    y1,y2: ',y1,y2
-!               write(*,*) '    xcut: ',xcut
-!               write(*,*) '    qA: ',qA
-!               write(*,*) '    qB: ',qB
-!               write(*,*) '    ql,qr,flx: ',ql,qr,flx
+               write(*,*) '  R side eid,xcut: ',eid,xcut
+               write(*,*) '    x1,x2: ',x1,x2
+               write(*,*) '    y1,y2: ',y1,y2
+               write(*,*) '    xcut: ',xcut
+               write(*,*) '    qA: ',qA
+               write(*,*) '    qB: ',qB
+               write(*,*) '    ql,qr,flx: ',ql,qr,flx
 
                ! Handle mesh A L node flux 
-               call shapefunction(mshA%nshp,x1,[x1,x2],[1d0,1d0],wtmp,dwtmp)
+               wtmp = 1d0
+               call shapefunction(mshA%nshp,x1,[x1,x2],wtmp,wtmp,dwtmp)
                neigh = mshA%face(1,eid)
-               call shapefunction(mshA%nshp,x1,mshA%x(mshA%e2n(:,neigh)),mshA%q(1,:,neigh),qtmp,dqtmp)
+               call shapefunction(mshA%nshp,x1,mshA%xe(:,neigh),mshA%q(1,:,neigh),qtmp,dqtmp)
                qL = sum(qtmp)
                call shapefunction(mshA%nshp,x1,[x1,x2],qA,qtmp,dqtmp)
                qR = sum(qtmp)
@@ -213,7 +223,8 @@ contains
                enddo
 
                ! add intermesh flux from mesh B interior to mesh A R node
-               call shapefunction(mshA%nshp,xcut(1),[x1,x2],[1d0,1d0],wtmp,dwtmp)
+               wtmp = 1d0
+               call shapefunction(mshA%nshp,xcut(1),[x1,x2],wtmp,wtmp,dwtmp)
                call shapefunction(mshB%nshp,xcut(1),[y1,y2],qB,qtmp,dqtmp)
                qR = sum(qtmp)
                call shapefunction(mshA%nshp,xcut(1),[x1,x2],qA,qtmp,dqtmp)
@@ -235,8 +246,8 @@ contains
              do aa = 1,mshA%ngauss
                ! get shapefunction from msh A at quad pts of remaining element
                xg = mshA%xgauss(aa)*(xrem(2)-xrem(1))+0.5d0*(xrem(2)+xrem(1))
-
-               call shapefunction(mshA%nshp,xg,[x1,x2],[1d0,1d0],wtmp,dwtmp)
+               wtmp = 1d0
+               call shapefunction(mshA%nshp,xg,[x1,x2],wtmp,wtmp,dwtmp)
                call shapefunction(mshA%nshp,xg,[x1,x2],qA,qtmp,dqtmp)
                call volint(sum(qtmp),vol)
                do bb = 1,mshA%nshp
@@ -248,9 +259,9 @@ contains
              enddo ! ngauss
 
 !             write(*,*) '    xrem: ',xrem
-!             write(*,*) '    rhsV 2: ',mshA%rhsV(1,:,eid)
-!             write(*,*) '    rhsF 2: ',mshA%rhsF(1,:,eid)
-!             write(*,*) '    rhs2 = ',mshA%rhs(1,:,eid)
+             write(*,*) '    rhsV 2: ',mshA%rhsV(1,:,eid)
+             write(*,*) '    rhsF 2: ',mshA%rhsF(1,:,eid)
+             write(*,*) '    rhs2 = ',mshA%rhs(1,:,eid)
 
              cycle iloop
           endif
@@ -287,8 +298,8 @@ contains
           if (x1 > y2 .or. x2 < y1) then ! skip if not overlapping
              cycle eloop
           else
-	     if (mshB%iblank(mshB%e2n(1,j)) .ne.1 .and. &
-                 mshB%iblank(mshB%e2n(2,j)) .ne.1) cycle eloop ! skip if incomplete mesh B elem
+	     if (mshB%iblank(1,j) .ne.1 .and. &
+                 mshB%iblank(2,j) .ne.1) cycle eloop ! skip if incomplete mesh B elem
              qB=mshB%q(1,:,j)
 
              if ((x1-y1)*(x1-y2) .le. 0.0) then ! L node of mesh A is inside of mesh B elem
@@ -309,7 +320,8 @@ contains
              do aa = 1,mshA%ngauss
                ! get shapefunction from msh A at quad pts of cut section
                xg = mshA%xgauss(aa)*lcut+xc
-               call shapefunction(mshA%nshp,xg,[x1,x2],[1d0,1d0],wtmp,dwtmp)
+               wtmp = 1d0
+               call shapefunction(mshA%nshp,xg,[x1,x2],wtmp,wtmp,dwtmp)
                do bb = 1,mshA%nshp
                  do cc = 1,mshA%nshp
                     index1 = (bb-1)*mshA%nshp+cc

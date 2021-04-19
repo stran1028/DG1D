@@ -12,8 +12,8 @@ subroutine computeMoments(msh,moments)
  moments=0d0
  xlen=0d0
  do i=1,msh%nelem
-   if (msh%iblank(msh%e2n(1,i)) .ne. 1 .and. &
-       msh%iblank(msh%e2n(2,i)) .ne. 1) cycle
+   if (msh%iblank(1,i) .ne. 1 .and. &
+       msh%iblank(2,i) .ne. 1) cycle
    dx=msh%xe(2,i)-msh%xe(1,i)
    xc=(msh%xe(2,i)+msh%xe(1,i))*0.5
    moments(1)=moments(1)+msh%q(1,1,i)*dx

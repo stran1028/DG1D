@@ -39,8 +39,8 @@ contains
         dqval(1) = 0d0*q(1)
         qval(2) = zi*q(2) 
         dqval(2) = 1d0*q(2)
-!        qval(3) = 0.5d0*(3d0*zi*zi-1d0) *q(3)
-!        dqval(3) = 3d0*zi*q(3)
+        qval(3) = 0.5d0*(3d0*zi*zi-1d0) *q(3)
+        dqval(3) = 3d0*zi*q(3)
         qout = qval(1:nshp)
         dqout = dqval(1:nshp)
       endif

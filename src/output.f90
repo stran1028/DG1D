@@ -7,33 +7,28 @@ subroutine output(iout,msh)
   integer, intent(in):: iout
   type(mesh), intent(in) :: msh
   !
-  integer :: i
+  integer :: i,j
   real*8 :: qout(msh%nshp),dqout(msh%nshp),q1,q2,error(1)
   character*6 :: fname
   !
-  write(fname,'(A5,I1)') 'aout.',iout
+  write(fname,'(A5,I1)') 'iblank.',iout
   open(unit=11,file=fname,form='formatted')
   write(fname,'(A5,I1)') 'mesh.',iout
   open(unit=12,file=fname,form='formatted')
 
   do i=1,msh%nelem
-    if (msh%iblank(msh%e2n(1,i)) == 1 .or. &
-        msh%iblank(msh%e2n(2,i)) == 1) then 
-        
-       call shapefunction(msh%nshp,msh%xe(1,i),[msh%xe(1,i),msh%xe(2,i)],msh%sol(1,:,i),qout,dqout)
-       q1 = sum(qout)
-       call shapefunction(msh%nshp,msh%xe(2,i),[msh%xe(1,i),msh%xe(2,i)],msh%sol(1,:,i),qout,dqout)
-       q2 = sum(qout)
+    write(11,*) msh%xe(1,i),msh%xe(2,i),msh%iblank(:,i)
+    if (maxval(msh%iblank(:,i)) == 1) then 
 
-       write(11,*) 0.5*(msh%xe(1,i)+msh%xe(2,i)),&
-                   (q1+q2)/msh%nshp     
-       call initq(msh%xe(1,i),error)
-       error = error-q1
-       write(12,*) msh%xe(1,i),q1, error
+       do j = 1,msh%nshp        
+         call shapefunction(msh%nshp,msh%x(msh%e2n(j,i)),[msh%xe(1,i),msh%xe(2,i)],msh%sol(1,:,i),qout,dqout)
+         q1 = sum(qout)
 
-       call initq(msh%xe(2,i),error)
-       error = error-q2
-       write(12,*) msh%xe(2,i),q2,error
+         call initq(msh%x(msh%e2n(j,i)),error)
+         error = error-q1
+         write(12,*) msh%x(msh%e2n(j,i)),q1, error
+      enddo
+
     endif
   enddo
   close(11)

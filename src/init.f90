@@ -9,7 +9,7 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   real*8, intent(in) :: dx
   integer, intent(in) :: iperiodic,order
   !
-  real*8 :: dxmod
+  real*8 :: dxmod,tmp
   integer:: i,j,k,ii,index1
   !
   msh%nelem=nint((xlim(2)-xlim(1))/dx)
@@ -30,19 +30,34 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
 !  msh%xgauss = 0.5d0*[0d0,-0.90618d0,-0.538469d0,.538469d0,0.90618d0]
 !  msh%wgauss = 0.5d0*[0.568889d0, 0.236927d0,0.478629d0,0.478629d0,0.236927d0]
 
-  msh%nnodes=msh%nelem*2d0
+  msh%nnodes=msh%nelem*msh%nshp
+  msh%nvtx=msh%nelem*2
   allocate(msh%x(msh%nnodes))
-  allocate(msh%e2n(2,msh%nelem)) ! element to node number map? 
+  allocate(msh%e2n(msh%nshp,msh%nelem)) ! element to node number map? 
   allocate(msh%xe(2,msh%nelem))
   allocate(msh%dx(msh%nelem))
+
+! Need to rewrite for higher order elements
   do i=1,msh%nelem
-     msh%x(2*i-1) = xlim(1)+(i-1)*dxmod ! left node cood
-     msh%x(2*i) = xlim(1)+(i)*dxmod ! right node cood
-     msh%e2n(1,i)=2*i-1                 ! left node id
-     msh%e2n(2,i)=2*i                   ! right node id
-     msh%xe(1,i)=msh%x(2*i-1)               ! left node coord
-     msh%xe(2,i)=msh%x(2*i)             ! right node coord
+     index1 = (i-1)*msh%nshp
+     msh%xe(1,i)=xlim(1)+(i-1)*dxmod        ! left node coord
+     msh%xe(2,i)=xlim(1)+i*dxmod        ! right node coord
      msh%dx(i) = msh%xe(2,i)-msh%xe(1,i)
+     do j = 1,msh%nshp
+       msh%e2n(j,i) = index1 + j ! ids node j on element j
+     enddo 
+
+     ! node locations
+     if(order.eq.0) then
+       msh%x(index1+1) = 0.5*(msh%xe(1,i) + msh%xe(2,i))
+     elseif(order.gt.0) then 
+       msh%x(index1+1) = msh%xe(1,i)
+       do j = 2,msh%nshp
+         tmp = dxmod/(msh%nshp-1d0)
+         msh%x(index1+j) = msh%xe(1,i)+tmp
+       enddo 
+     endif 
+       
   enddo
   !
   allocate(msh%shp(msh%ngauss,msh%nshp))
@@ -50,7 +65,8 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   do i = 1,msh%ngauss
     ! 1D Lagrange elements for now
     ! Parent element goes from -1/2 to 1/2
-    call shapefunction(msh%nshp,msh%xgauss(i),[-0.5d0,0.5d0],[1d0,1d0],msh%shp(i,:),msh%dshp(i,:))
+    msh%shp(i,:) = 1d0
+    call shapefunction(msh%nshp,msh%xgauss(i),[-0.5d0,0.5d0],msh%shp(i,:),msh%shp(i,:),msh%dshp(i,:))
   enddo
   !
   msh%nfaces=msh%nelem
@@ -73,8 +89,8 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   allocate(msh%rhsF(msh%nfields,msh%nshp,msh%nelem))
   allocate(msh%rhsV(msh%nfields,msh%nshp,msh%nelem))
   allocate(msh%mass(msh%nfields,msh%nshp*msh%nshp,msh%nelem))
-  allocate(msh%iblank(msh%nnodes))
-  allocate(msh%nres(msh%nnodes))
+  allocate(msh%iblank(2,msh%nelem))
+  allocate(msh%nres(msh%nvtx))
   !
   ! Storing NaNb for M = int(Na Nb |J| dx)
   msh%mass = 0.0
@@ -94,7 +110,7 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   !
   if (iperiodic==0) then
      msh%nres(1)=1E15
-     msh%nres(msh%nnodes)=1E15
+     msh%nres(msh%nvtx)=1E15
   endif
   !
 end subroutine init_mesh

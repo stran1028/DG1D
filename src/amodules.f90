@@ -7,11 +7,12 @@ module code_types
      integer :: nfaces
      integer :: iperiodic
      integer :: nshp
+     integer :: nvtx
      integer :: ngauss
      ! 
      integer, allocatable :: e2n(:,:)  !< element to end-node connectivity
      integer, allocatable :: face(:,:) !< element end-faces
-     integer, allocatable :: iblank(:) !< iblank for end-nodes
+     integer, allocatable :: iblank(:,:) !< iblank for end-nodes
      !
      real*8, allocatable :: dq(:,:,:)   !< q-variables (nfields,nshp,nelem)
      real*8, allocatable :: q(:,:,:)   !< intermediate q-variables (nfields,nshp,nelem)

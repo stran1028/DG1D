@@ -52,7 +52,8 @@ contains
 !        if (abs(xloc) > 0.8d0) tmp=0d0
         !tmp = exp(-.010d0*xloc*xloc)
         !if (abs(xloc) > 80d0) tmp=0d0
-        call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],[1d0,1d0],qvals,dqvals)
+        qvals = 1d0
+        call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],qvals,qvals,dqvals)
         do k = 1,msh%nshp
           f(k) = f(k) + msh%wgauss(j)*msh%dx(i)*tmp*qvals(k)
         enddo

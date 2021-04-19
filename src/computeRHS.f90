@@ -22,7 +22,7 @@ subroutine computeRHS(msh)
     e2=msh%face(2,i)
 
     ! Only look at interior mesh elements, save fringes for later
-    if(minval(msh%iblank(msh%e2n(:,i))).eq.1d0) then 
+    if(minval(msh%iblank(:,i)).eq.1) then 
       ! Calculate the volume integrals
       do j = 1,msh%ngauss
         call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],msh%q(1,:,i),qvals,dqvals)
@@ -37,9 +37,9 @@ subroutine computeRHS(msh)
       !
       ! Calculate the fluxes within current mesh
       if (e1.ne.e2) then
-        ! Left flux boundary        
-        call shapefunction(msh%nshp,-0.5d0,[-0.5d0,0.5d0],[1d0,1d0],qvals,dqvals)
-        w = qvals
+        ! Left flux boundary       
+        qvals = 1d0
+        call shapefunction(msh%nshp,-0.5d0,[-0.5d0,0.5d0],qvals,w,dqvals)
         call shapefunction(msh%nshp,msh%xe(2,e1),msh%xe(:,e1),msh%q(1,:,e1),qvals,dqvals)
         ql = sum(qvals)
         call shapefunction(msh%nshp,msh%xe(1,i),msh%xe(:,i),msh%q(1,:,i),qvals,dqvals)
@@ -51,8 +51,8 @@ subroutine computeRHS(msh)
         enddo
         
         ! Right flux boundary
-        call shapefunction(msh%nshp,0.5d0,[-0.5d0,0.5d0],[1d0,1d0],qvals,dqvals)
-        w = qvals
+        qvals = 1d0
+        call shapefunction(msh%nshp,0.5d0,[-0.5d0,0.5d0],qvals,w,dqvals)
         call shapefunction(msh%nshp,msh%xe(2,i),msh%xe(:,i),msh%q(1,:,i),qvals,dqvals)
         ql = sum(qvals)
         call shapefunction(msh%nshp,msh%xe(1,e2),msh%xe(:,e2),msh%q(1,:,e2),qvals,dqvals)
