@@ -15,7 +15,7 @@ program conservative_overset
   type(mesh), allocatable :: msh(:)
   allocate(msh(nmesh))
   !
-  ntime= 4000
+  ntime= 1000
   dt=.05d0 !0.010471975511966d0 !0.05d0/3d0
   rk = [1d0/4d0, 8d0/15d0,5d0/12d0, 3d0/4d0];
   consoverset = 1

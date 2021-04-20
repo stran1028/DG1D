@@ -19,16 +19,28 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   msh%porder=order
   msh%iperiodic=iperiodic
   msh%nshp = order+1 
-  write(*,*) 'order,nshp = ',order,msh%nshp
   !
-  msh%ngauss=3
+  msh%ngauss=msh%nshp+1
   allocate(msh%xgauss(msh%ngauss))
-  ! fixed 2nd order gauss pts for now
-  !msh%xgauss = [0d0,-sqrt(3d0)/2d0,sqrt(3d0)/2d0] ! Jay's original
-  msh%xgauss = 0.5*[0d0,-sqrt(3d0/5d0),sqrt(3d0/5d0)] ! In coordinates of parent element
-  msh%wgauss = 0.5*[8d0/9d0,5d0/9d0,5d0/9d0]
-!  msh%xgauss = 0.5d0*[0d0,-0.90618d0,-0.538469d0,.538469d0,0.90618d0]
-!  msh%wgauss = 0.5d0*[0.568889d0, 0.236927d0,0.478629d0,0.478629d0,0.236927d0]
+  allocate(msh%wgauss(msh%ngauss))
+  ! Parent element goes from -0.5 to 0.5
+  if(msh%ngauss.eq.1) then 
+    msh%xgauss = 0d0
+    msh%wgauss = 1d0
+  elseif(msh%ngauss.eq.2) then 
+    msh%xgauss = [-0.5/sqrt(3d0),0.5/sqrt(3d0)]
+    msh%wgauss = [0.5,0.5]
+  elseif(msh%ngauss.eq.3) then 
+    msh%xgauss = 0.5*[0d0,-sqrt(3d0/5d0),sqrt(3d0/5d0)]
+    msh%wgauss = 0.5*[8d0/9d0,5d0/9d0,5d0/9d0]
+  elseif(msh%ngauss.eq.4) then 
+    msh%xgauss = 0.5*[-sqrt(3d0/7d0-2d0/7d0*sqrt(6d0/5d0)),sqrt(3d0/7d0-2d0/7d0*sqrt(6d0/5d0)), &
+                      -sqrt(3d0/7d0+2d0/7d0*sqrt(6d0/5d0)),sqrt(3d0/7d0+2d0/7d0*sqrt(6d0/5d0))]
+    msh%wgauss = 0.5*[(18d0+sqrt(30d0))/36d0,(18d0+sqrt(30d0))/36d0,(18d0-sqrt(30d0))/36d0,(18d0-sqrt(30d0))/36d0]
+  endif
+  write(*,*) 'order,nshp,ngauss = ',order,msh%nshp,msh%ngauss
+  write(*,*) 'xgauss: ',msh%xgauss
+  write(*,*) 'wgauss: ',msh%wgauss
 
   msh%nnodes=msh%nelem*msh%nshp
   msh%nvtx=msh%nelem*2
