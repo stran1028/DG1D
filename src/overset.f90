@@ -153,14 +153,6 @@ contains
                  xrem = [x1,x2]
                endif
 
-               write(*,*) '  L side , eid: ',eid,xcut
-               write(*,*) '    x1,x2: ',x1,x2
-               write(*,*) '    y1,y2: ',y1,y2
-               write(*,*) '    xcut: ',xcut
-               write(*,*) '    qA: ',qA
-               write(*,*) '    qB: ',qB
-               write(*,*) '    ql,qr,flx: ',ql,qr,flx
-               
                ! add intermesh flux from mesh B interior to mesh A L node
                wtmp = 1d0
                call shapefunction(mshA%nshp,xcut(2),[x1,x2],wtmp,wtmp,dwtmp)
@@ -188,6 +180,15 @@ contains
                  mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) - wtmp(k)*flx
                enddo
 
+               write(*,*) '  L side , eid: ',eid,xcut
+               write(*,*) '    x1,x2: ',x1,x2
+               write(*,*) '    y1,y2: ',y1,y2
+               write(*,*) '    xcut: ',xcut
+               write(*,*) '    qA: ',qA
+               write(*,*) '    qB: ',qB
+               write(*,*) '    ql,qr,flx: ',ql,qr,flx
+               
+
 
              elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem          
                ! Overlap is between y1 and x2
@@ -199,14 +200,6 @@ contains
                  xcut = [x2,x2]
                  xrem = [x1,x2]
                endif
-
-               write(*,*) '  R side eid,xcut: ',eid,xcut
-               write(*,*) '    x1,x2: ',x1,x2
-               write(*,*) '    y1,y2: ',y1,y2
-               write(*,*) '    xcut: ',xcut
-               write(*,*) '    qA: ',qA
-               write(*,*) '    qB: ',qB
-               write(*,*) '    ql,qr,flx: ',ql,qr,flx
 
                ! Handle mesh A L node flux 
                wtmp = 1d0
@@ -234,6 +227,14 @@ contains
                  mshA%rhsF(:,k,eid) = mshA%rhsF(:,k,eid) - wtmp(k)*flx
                  mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) - wtmp(k)*flx
                enddo
+
+               write(*,*) '  R side eid,xcut: ',eid,xcut
+               write(*,*) '    x1,x2: ',x1,x2
+               write(*,*) '    y1,y2: ',y1,y2
+               write(*,*) '    xcut: ',xcut
+               write(*,*) '    qA: ',qA
+               write(*,*) '    qB: ',qB
+               write(*,*) '    ql,qr,flx: ',ql,qr,flx
 
 
              endif
@@ -317,6 +318,8 @@ contains
              xc = 0.5*(xcut(1)+xcut(2))   ! center of section to be removed
                
              ! Adjust mass matrix 
+                write(*,*) ' '
+                !write(*,*) 'mass1 = ',mshA%mass(:,:,eid)
              do aa = 1,mshA%ngauss
                ! get shapefunction from msh A at quad pts of cut section
                xg = mshA%xgauss(aa)*lcut+xc
@@ -331,6 +334,7 @@ contains
 
                enddo ! nshp
              enddo ! ngauss
+            ! write(*,*) 'mass2 = ',mshA%mass(:,:,eid)
 
              cycle iloop
           endif

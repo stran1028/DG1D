@@ -14,11 +14,11 @@ subroutine solveDQ(msh,dt)
     call forwprop(L,msh%rhs(1,:,i),msh%nshp,y)
     call backprop(U,y,msh%nshp,msh%dq(1,:,i))
 
-    write(*,*) ' '
-    write(*,*) 'i = ',i
-    write(*,*) 'mass = ',msh%mass(1,:,i)
-    write(*,*) 'rhs = ',msh%rhs(1,:,i)
-    write(*,*) 'dq = ',msh%dq(1,:,i)
+!    write(*,*) ' '
+!    write(*,*) 'i = ',i
+!    write(*,*) 'mass = ',msh%mass(1,:,i)
+!    write(*,*) 'rhs = ',msh%rhs(1,:,i)
+!    write(*,*) 'dq = ',msh%dq(1,:,i)
     
    ! 1st order Euler in time
 !    relax = 1.0d0
