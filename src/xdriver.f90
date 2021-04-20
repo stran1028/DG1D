@@ -15,7 +15,7 @@ program conservative_overset
   type(mesh), allocatable :: msh(:)
   allocate(msh(nmesh))
   !
-  ntime= 1
+  ntime= 4000
   dt=.05d0 !0.010471975511966d0 !0.05d0/3d0
   rk = [1d0/4d0, 8d0/15d0,5d0/12d0, 3d0/4d0];
   consoverset = 1
@@ -27,10 +27,11 @@ program conservative_overset
   call setshp('legendre')
   !
   ! Initialize the mesh(es)
-  order = 5
+  order = 3
   call init_mesh(msh(1),[-100d0,100d0],1d0,1,order)
   call init_mesh(msh(2),[0.75d0,20.75d0],0.5d0,0,order)
   !
+  write(*,*) "INITIALIZE VARIABLES:"
   do n=1,nmesh
    call initvar(msh(n))
   enddo
@@ -56,6 +57,7 @@ program conservative_overset
   ! write IC
   do n=1,nmesh
    call output(n,msh(n))
+   call computeMoments(msh(n),mom0(:,n))
   enddo
   !
   ! Iterate in time
@@ -73,30 +75,30 @@ program conservative_overset
    call timestep(nmesh,dt,msh,consoverset)
    do j = 1,nmesh
      ! Euler 1st order
-     msh(j)%q=msh(j)%q+dt*msh(j)%dq
-     msh(j)%sol=msh(j)%q
+!     msh(j)%q=msh(j)%q+dt*msh(j)%dq
+!     msh(j)%sol=msh(j)%q
 
-!     msh(j)%q=msh(j)%sol+rk(2)*dt*msh(j)%dq
-!     msh(j)%sol=msh(j)%sol+rk(1)*dt*msh(j)%dq
+     msh(j)%q=msh(j)%sol+rk(2)*dt*msh(j)%dq
+     msh(j)%sol=msh(j)%sol+rk(1)*dt*msh(j)%dq
    enddo
 
 !write(*,*) ' ' 
 !write(*,*) 'rk step 2'
 
    ! RK step 2
-!   call timestep(nmesh,dt,msh,consoverset)
+   call timestep(nmesh,dt,msh,consoverset)
    do j = 1,nmesh
-!     msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
+     msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
    enddo
 
 !write(*,*) ' ' 
 !write(*,*) 'rk step 3'
 
   ! RK step 3
- !  call timestep(nmesh,dt,msh,consoverset)
+   call timestep(nmesh,dt,msh,consoverset)
    do j = 1,nmesh
-  !   msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
-   !  msh(j)%q = msh(j)%sol
+     msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
+     msh(j)%q = msh(j)%sol
    enddo
 
   end do ! timesteps
@@ -104,6 +106,7 @@ program conservative_overset
   ! write final output
   do n=1,nmesh
      call output(nmesh+n,msh(n))
+     call computeMoments(msh(n),mom1(:,n))
   enddo
   !
 end program conservative_overset

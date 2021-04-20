@@ -180,13 +180,13 @@ contains
                  mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) - wtmp(k)*flx
                enddo
 
-               write(*,*) '  L side , eid: ',eid,xcut
-               write(*,*) '    x1,x2: ',x1,x2
-               write(*,*) '    y1,y2: ',y1,y2
-               write(*,*) '    xcut: ',xcut
-               write(*,*) '    qA: ',qA
-               write(*,*) '    qB: ',qB
-               write(*,*) '    ql,qr,flx: ',ql,qr,flx
+               !write(*,*) '  L side , eid: ',eid,xcut
+               !write(*,*) '    x1,x2: ',x1,x2
+               !write(*,*) '    y1,y2: ',y1,y2
+               !write(*,*) '    xcut: ',xcut
+               !write(*,*) '    qA: ',qA
+               !write(*,*) '    qB: ',qB
+               !write(*,*) '    ql,qr,flx: ',ql,qr,flx
                
 
 
@@ -228,13 +228,13 @@ contains
                  mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) - wtmp(k)*flx
                enddo
 
-               write(*,*) '  R side eid,xcut: ',eid,xcut
-               write(*,*) '    x1,x2: ',x1,x2
-               write(*,*) '    y1,y2: ',y1,y2
-               write(*,*) '    xcut: ',xcut
-               write(*,*) '    qA: ',qA
-               write(*,*) '    qB: ',qB
-               write(*,*) '    ql,qr,flx: ',ql,qr,flx
+               !write(*,*) '  R side eid,xcut: ',eid,xcut
+               !write(*,*) '    x1,x2: ',x1,x2
+               !write(*,*) '    y1,y2: ',y1,y2
+               !write(*,*) '    xcut: ',xcut
+               !write(*,*) '    qA: ',qA
+               !write(*,*) '    qB: ',qB
+               !write(*,*) '    ql,qr,flx: ',ql,qr,flx
 
 
              endif
@@ -260,9 +260,9 @@ contains
              enddo ! ngauss
 
 !             write(*,*) '    xrem: ',xrem
-             write(*,*) '    rhsV 2: ',mshA%rhsV(1,:,eid)
-             write(*,*) '    rhsF 2: ',mshA%rhsF(1,:,eid)
-             write(*,*) '    rhs2 = ',mshA%rhs(1,:,eid)
+             !write(*,*) '    rhsV 2: ',mshA%rhsV(1,:,eid)
+             !write(*,*) '    rhsF 2: ',mshA%rhsF(1,:,eid)
+             !write(*,*) '    rhs2 = ',mshA%rhs(1,:,eid)
 
              cycle iloop
           endif
@@ -318,7 +318,8 @@ contains
              xc = 0.5*(xcut(1)+xcut(2))   ! center of section to be removed
                
              ! Adjust mass matrix 
-                write(*,*) ' '
+                !write(*,*) ' '
+                !write(*,*) 'xcut,x =  ',xcut,x1,x2
                 !write(*,*) 'mass1 = ',mshA%mass(:,:,eid)
              do aa = 1,mshA%ngauss
                ! get shapefunction from msh A at quad pts of cut section
@@ -334,7 +335,8 @@ contains
 
                enddo ! nshp
              enddo ! ngauss
-            ! write(*,*) 'mass2 = ',mshA%mass(:,:,eid)
+             !write(*,*) 'mass2 = ',mshA%mass(:,:,eid)
+             !write(*,*) ' '
 
              cycle iloop
           endif

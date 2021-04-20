@@ -20,7 +20,7 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   msh%iperiodic=iperiodic
   msh%nshp = order+1 
   !
-  msh%ngauss=7 ! msh%nshp
+  msh%ngauss= 10 !msh%nshp+1
   allocate(msh%xgauss(msh%ngauss))
   allocate(msh%wgauss(msh%ngauss))
   ! Parent element goes from -0.5 to 0.5
@@ -58,7 +58,7 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   elseif(msh%ngauss.eq.9) then 
     msh%xgauss = 0.5*[0.000000,-0.8360311073266358,0.8360311073266358,-0.9681602395076261,0.9681602395076261,&
                      -0.3242534234038089,0.3242534234038089,-0.6133714327005904,0.6133714327005904]
-    msh%wgauss = 0.5*[0.3302393550012598,0.3302393550012598,0.3302393550012598,0.0812743883615744,&
+    msh%wgauss = 0.5*[0.3302393550012598,0.1806481606948574,0.1806481606948574,0.0812743883615744,&
                       0.0812743883615744,0.3123470770400029,0.3123470770400029,0.2606106964029354,0.2606106964029354]
   elseif(msh%ngauss.eq.10) then 
     msh%xgauss = 0.5*[-0.1488743389816312,0.1488743389816312,-0.4333953941292472,0.4333953941292472,&
@@ -66,11 +66,11 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
                       -0.9739065285171717,0.9739065285171717]
     msh%wgauss = 0.5*[0.2955242247147529,0.2955242247147529,0.2692667193099963,0.2692667193099963,&
                       0.2190863625159820,0.2190863625159820,0.1494513491505806,0.1494513491505806,&
-                      0.1494513491505806,0.1494513491505806]
+                      0.0666713443086881,0.0666713443086881]
   endif
-  write(*,*) 'order,nshp,ngauss = ',order,msh%nshp,msh%ngauss
-  write(*,*) 'xgauss: ',msh%xgauss
-  write(*,*) 'wgauss: ',msh%wgauss
+  !write(*,*) 'order,nshp,ngauss = ',order,msh%nshp,msh%ngauss
+  !write(*,*) 'xgauss: ',msh%xgauss
+  !write(*,*) 'wgauss: ',msh%wgauss
 
   msh%nnodes=msh%nelem*msh%nshp
   msh%nvtx=msh%nelem*2
@@ -79,7 +79,6 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   allocate(msh%xe(2,msh%nelem))
   allocate(msh%dx(msh%nelem))
 
-! Need to rewrite for higher order elements
   do i=1,msh%nelem
      index1 = (i-1)*msh%nshp
      msh%xe(1,i)=xlim(1)+(i-1)*dxmod        ! left node coord
@@ -146,9 +145,9 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   enddo
   enddo
   !
-  write(*,*) ' '
-  write(*,*) 'init mass = ',msh%mass(1,1:msh%nshp,1)
-  write(*,*) ' '
+  !write(*,*) ' '
+  !write(*,*) 'init mass = ',msh%mass(1,1:msh%nshp,1)
+  !write(*,*) ' '
 
   msh%iblank=1
   msh%nres=dxmod
