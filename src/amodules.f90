@@ -21,8 +21,6 @@ module code_types
      real*8, allocatable :: xe(:,:)    !< element end coords
      real*8, allocatable :: nres(:)    !< nodal resolution for overset
      real*8, allocatable :: rhs(:,:,:) !< rhs vector (nfield, nshp, nelem)
-     real*8, allocatable :: rhsV(:,:,:) !< rhs vector (nfield, nshp, nelem)
-     real*8, allocatable :: rhsF(:,:,:) !< rhs vector (nfield, nshp, nelem)
      real*8, allocatable :: mass(:,:,:) !< Mass matrix (nfield,nshp*nshp,nelem)
      real*8, allocatable :: dx(:)      !< element size
      real*8, allocatable :: wgauss(:)   !< weight of gauss pts (ngauss)

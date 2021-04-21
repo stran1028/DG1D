@@ -1,4 +1,4 @@
-subroutine computeMoments(msh,moments)
+subroutine computeMoments(msh,moments,error)
  !
   use pde
   use bases
@@ -35,8 +35,8 @@ subroutine computeMoments(msh,moments)
 
  enddo
 ! moments(2)=xlen
-write(*,*) ' '
-write(*,*) 'ndof, Moments: = ',ndof,moments
-write(*,*) 'L2 error: ',error
-write(*,*) ' '
+!write(*,*) ' '
+!write(*,*) 'ndof, Moments: = ',ndof,moments
+!write(*,*) 'L2 error: ',error
+!write(*,*) ' '
 end subroutine computeMoments

@@ -209,7 +209,6 @@ contains
                qR = sum(qtmp)
                call flux(qL,qR,flx)
                do k = 1,mshA%nshp
-                 mshA%rhsF(:,k,eid)= mshA%rhsF(:,k,eid) + wtmp(k)*flx
                  mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) + wtmp(k)*flx
                enddo
 
@@ -222,7 +221,6 @@ contains
                qL = sum(qtmp)
                call flux(ql,qr,flx)
                do k = 1,mshA%nshp
-                 mshA%rhsF(:,k,eid) = mshA%rhsF(:,k,eid) - wtmp(k)*flx
                  mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) - wtmp(k)*flx
                enddo
 

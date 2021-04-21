@@ -68,7 +68,7 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
                       0.2190863625159820,0.2190863625159820,0.1494513491505806,0.1494513491505806,&
                       0.0666713443086881,0.0666713443086881]
   endif
-  write(*,*) 'order,nshp,ngauss = ',order,msh%nshp,msh%ngauss
+  write(*,*) '  order,nelem,nshp,ngauss = ',order,msh%nelem,msh%nshp,msh%ngauss
 
   msh%nnodes=msh%nelem*msh%nshp
   msh%nvtx=msh%nelem*2
@@ -122,8 +122,6 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   allocate(msh%q(msh%nfields,msh%nshp,msh%nelem))
   allocate(msh%sol(msh%nfields,msh%nshp,msh%nelem))
   allocate(msh%rhs(msh%nfields,msh%nshp,msh%nelem))
-  allocate(msh%rhsF(msh%nfields,msh%nshp,msh%nelem))
-  allocate(msh%rhsV(msh%nfields,msh%nshp,msh%nelem))
   allocate(msh%mass(msh%nfields,msh%nshp*msh%nshp,msh%nelem))
   allocate(msh%iblank(2,msh%nelem))
   allocate(msh%nres(msh%nvtx))
