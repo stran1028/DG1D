@@ -162,7 +162,6 @@ contains
                qR = sum(qtmp)
                call flux(qL,qR,flx)
                do k = 1,mshA%nshp
-                 mshA%rhsF(:,k,eid)= mshA%rhsF(:,k,eid) + wtmp(k)*flx
                  mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) + wtmp(k)*flx
                enddo
 
@@ -176,7 +175,6 @@ contains
                qR = sum(qtmp)
                call flux(qL,qR,flx)
                do k = 1,mshA%nshp
-                 mshA%rhsF(:,k,eid)= mshA%rhsF(:,k,eid) - wtmp(k)*flx
                  mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) - wtmp(k)*flx
                enddo
 
@@ -253,15 +251,12 @@ contains
                call volint(sum(qtmp),vol)
                do bb = 1,mshA%nshp
                  ! Volume Integral
-                 mshA%rhsV(:,bb,eid) = mshA%rhsV(:,bb,eid) +mshA%wgauss(aa)*dwtmp(bb)*fact*vol!
                  mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) + dwtmp(bb)*vol*(mshA%wgauss(aa)*fact) ! scale gauss weights by length of remaining element parent
 
                enddo ! nshp
              enddo ! ngauss
 
 !             write(*,*) '    xrem: ',xrem
-             !write(*,*) '    rhsV 2: ',mshA%rhsV(1,:,eid)
-             !write(*,*) '    rhsF 2: ',mshA%rhsF(1,:,eid)
              !write(*,*) '    rhs2 = ',mshA%rhs(1,:,eid)
 
              cycle iloop

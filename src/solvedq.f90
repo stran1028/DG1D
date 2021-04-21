@@ -16,23 +16,7 @@ subroutine solveDQ(msh,dt)
 
 
     if(msh%iblank(1,i)*msh%iblank(2,i).eq.-1) then 
-    !write(*,*) 'solve:'
-    !write(*,*) '  i = ',i
-    !write(*,*) '  mass = ',msh%mass(1,:,i)
-    !write(*,*) '  rhs = ',msh%rhs(1,:,i)
-    !write(*,*) '  dq = ',msh%dq(1,:,i)
     endif
-
-   ! 1st order Euler in time
-!    relax = 1.0d0
-!    msh%q(1,1,i) = msh%q(1,1,i) + relax*msh%dq(1,i)*dt
-!    msh%q(1,2,i) = msh%q(1,2,i) + relax*msh%dq(2,i)*dt
-    
-!    if(abs(i-50).lt.10) then 
-!    write(*,*) '  q1 = ',msh%q(:,:,i) 
-!    write(*,*) ' '
-!    endif
-
   enddo
   !
 end subroutine solveDQ

@@ -1,6 +1,7 @@
-rm *.o *.mod fort.* mesh.* log
+rm *.o *.mod *exe mesh.* log
 make -f makefile
 echo ' '
 echo 'Running...'
 
 ./cons1d.exe > log
+echo 'Done'

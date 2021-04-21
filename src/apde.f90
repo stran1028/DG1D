@@ -46,10 +46,10 @@ contains
       f = 0.0d0
       do j = 1,msh%ngauss
         xloc = (msh%xgauss(j)+0.5d0)*dx + msh%xe(1,i)
-        tmp = exp(-0.01d0*xloc*xloc)
-        if (abs(xloc) > 40d0) tmp=0d0
-!        tmp = exp(-20d0*xloc*xloc)
-!        if (abs(xloc) > 0.8d0) tmp=0d0
+!        tmp = exp(-0.01d0*xloc*xloc)
+!        if (abs(xloc) > 40d0) tmp=0d0
+        tmp = exp(-20d0*xloc*xloc)
+        if (abs(xloc) > 0.8d0) tmp=0d0
         !tmp = exp(-.010d0*xloc*xloc)
         !if (abs(xloc) > 80d0) tmp=0d0
         qvals = 1d0
@@ -84,10 +84,10 @@ contains
     else     
 !       q = 1d0
 !        q = sin(x)
-!       q=exp(-20*x*x)
-!       if (abs(x) > 0.8d0) q=0d0
-       q=exp(-0.01*x*x)
-       if (abs(x) > 40d0) q=0d0
+       q=exp(-20*x*x)
+       if (abs(x) > 0.8d0) q=0d0
+!       q=exp(-0.01*x*x)
+!       if (abs(x) > 40d0) q=0d0
     endif
   end subroutine initq
   !

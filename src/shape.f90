@@ -58,40 +58,12 @@ contains
         endif
       elseif(shptype.eq.'legendre') then 
         ! Evaluate legendre polynomial
-!        write(*,*) 'LEGENDRE POLY'
         do i = 1,nshp
           do j = 1,i
             qval(i) = qval(i) + q(i)*legcoef(i,j)*zi**(j-1d0)
             dqval(i) = dqval(i) + q(i)*legderv(i,j)*zi**(j-1d0)
-!            if(i.eq.nshp) then 
-!             write(*,*) 'j = ',j
-!             write(*,*) '  coeff1 = ',legcoef(i,j)
-!             write(*,*) '  coeff2 = ',legderv(i,j)
-!             write(*,*) '  power = ',j-1d0
-!             write(*,*) '  q = ',q(i)
-!             write(*,*) '  zi = ',zi
-!             write(*,*) '  tmp = ',(2d0*zi)
-!             write(*,*) '  tmp1 = ',(2d0*zi)**(j-1d0)
-!             write(*,*) '  tmp2 = ',q(i)*legcoef(i,j)
-!             write(*,*) '  qvaltmp = ',qval(i)
-!            endif
           enddo
-!          write(*,*) 'i, qval = ',i,qval(i)
         enddo
-        
-!        test(1) = 1d0*q(1)
-!        dtest(1) = 0d0*q(1)
-!        test(2) = 2d0*zi*q(2) 
-!        dtest(2) = 2d0*q(2)
-!        do i = 1,2
-!        if((abs(test(i)-qval(i)).gt.1e-8).or.(abs(dtest(i)-dqval(i)).gt.1e-8)) then 
-!          write(*,*) 'error: ',test(i),qval(i)
-!          write(*,*) 'derror: ',dtest(i),dqval(i)
-!          call exit(1)
-!        endif
-!        enddo
-      !  qval(3) = 0.5d0*(3d0*zi*zi-1d0) *q(3)
-!        dqval(3) = 3d0*zi*q(3)
       endif
       qout = qval(1:nshp)
       dqout = dqval(1:nshp)

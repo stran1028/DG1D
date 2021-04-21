@@ -20,7 +20,7 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   msh%iperiodic=iperiodic
   msh%nshp = order+1 
   !
-  msh%ngauss= 10 !msh%nshp+1
+  msh%ngauss= msh%nshp+1
   allocate(msh%xgauss(msh%ngauss))
   allocate(msh%wgauss(msh%ngauss))
   ! Parent element goes from -0.5 to 0.5
@@ -68,9 +68,7 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
                       0.2190863625159820,0.2190863625159820,0.1494513491505806,0.1494513491505806,&
                       0.0666713443086881,0.0666713443086881]
   endif
-  !write(*,*) 'order,nshp,ngauss = ',order,msh%nshp,msh%ngauss
-  !write(*,*) 'xgauss: ',msh%xgauss
-  !write(*,*) 'wgauss: ',msh%wgauss
+  write(*,*) 'order,nshp,ngauss = ',order,msh%nshp,msh%ngauss
 
   msh%nnodes=msh%nelem*msh%nshp
   msh%nvtx=msh%nelem*2
@@ -92,7 +90,6 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
      if(order.eq.0) then
        msh%x(index1+1) = 0.5*(msh%xe(1,i) + msh%xe(2,i))
      elseif(order.gt.0) then 
-!       msh%x(index1+1) = msh%xe(1,i)
        do j = 1,msh%nshp
          tmp = dxmod/(msh%nshp-1d0)
          msh%x(index1+j) = msh%xe(1,i)+tmp*(j-1d0)
@@ -103,8 +100,7 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   allocate(msh%shp(msh%ngauss,msh%nshp))
   allocate(msh%dshp(msh%ngauss,msh%nshp))  
   do i = 1,msh%ngauss
-    ! 1D Lagrange elements for now
-    ! Parent element goes from -1/2 to 1/2
+    ! 1D Parent element goes from -1/2 to 1/2
     msh%shp(i,:) = 1d0
     call shapefunction(msh%nshp,msh%xgauss(i),[-0.5d0,0.5d0],msh%shp(i,:),msh%shp(i,:),msh%dshp(i,:))
   enddo

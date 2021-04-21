@@ -14,8 +14,6 @@ subroutine computeRHS(msh)
   !
   ! rhs = (msh%nfields,msh%nshp,msh%nelem)
   msh%rhs=0d0
-  msh%rhsV=0d0
-  msh%rhsF=0d0
   !
   do i = 1,msh%nelem
     e1=msh%face(1,i)
@@ -31,7 +29,6 @@ subroutine computeRHS(msh)
            call volint(qtmp,vol)
            vol = vol*msh%dshp(j,k)*msh%wgauss(j)
            msh%rhs(1,k,i) = msh%rhs(1,k,i) + vol 
-           msh%rhsV(1,k,i) = msh%rhsV(1,k,i) + vol 
         enddo 
       enddo
       !
@@ -47,7 +44,6 @@ subroutine computeRHS(msh)
         call flux(ql,qr,flx)
         do j = 1,msh%nshp
             msh%rhs(:,j,i) = msh%rhs(:,j,i) + w(j)*flx
-            msh%rhsF(:,j,i) = msh%rhsF(:,j,i) + w(j)*flx
         enddo
         
         ! Right flux boundary
@@ -60,7 +56,6 @@ subroutine computeRHS(msh)
         call flux(ql,qr,flx)
         do j = 1,msh%nshp
             msh%rhs(:,j,i) = msh%rhs(:,j,i) - w(j)*flx
-            msh%rhsF(:,j,i) = msh%rhsF(:,j,i) - w(j)*flx
         enddo
       endif ! e1 ne e2
     endif ! iblank 

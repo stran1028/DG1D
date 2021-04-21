@@ -34,8 +34,4 @@ subroutine output(iout,msh)
 !  close(11)
   close(12)
   !
-!  do i=1,msh%nnodes
-!    write(20+iout,*) msh%iblank(i)
-!  enddo
-  !
 end subroutine output

@@ -81,8 +81,6 @@
           u(index1) = A(index1)-s
         enddo ! loop k
 
-!        u = [2,-1,2,0,4,-1,0,0,3]
-
         ! Lower matrix
         do k = i,n
           if(i.eq.k) then
