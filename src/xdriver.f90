@@ -17,16 +17,10 @@ program conservative_overset
   type(mesh), allocatable :: msh(:)
   allocate(msh(nmesh))
   !
-  ! Set up the problem and bases types
-  call set_type('linear_advection',ainf)
-  !call set_type('burgers')
-  !call setshp('lagrange')
-  call setshp('legendre')
-  !
   ! Inputs
   cfl = 0.01d0
-  ainf = 1
-  consoverset = 1
+  ainf = 1d0
+  consoverset = 0
 
   if(consoverset.eq.1) then 
     write(*,*) 'CONSERVATIVE OVERSET:'
@@ -34,8 +28,14 @@ program conservative_overset
     write(*,*) 'BASELINE (ABUTTING METHOD):'
   endif
 
-  do order = 0,8
-  do h = 1,4
+  ! Set up the problem and bases types
+  call set_type('linear_advection',ainf)
+  !call set_type('burgers')
+  !call setshp('lagrange')
+  call setshp('legendre')
+  !
+  do order = 0,0
+  do h = 2,2
     if(h.eq.1) then  
       dx = [0.2d0,0.1d0]
     elseif(h.eq.2) then 
@@ -94,21 +94,21 @@ program conservative_overset
 !       msh(j)%q=msh(j)%q+dt*msh(j)%dq
 !       msh(j)%sol=msh(j)%q
 
-       msh(j)%q=msh(j)%sol+rk(2)*dt*msh(j)%dq
-       msh(j)%sol=msh(j)%sol+rk(1)*dt*msh(j)%dq
+      msh(j)%q=msh(j)%sol+rk(2)*dt*msh(j)%dq
+      msh(j)%sol=msh(j)%sol+rk(1)*dt*msh(j)%dq
      enddo
 
      ! RK step 2
      call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2)
      do j = 1,nmesh
-       msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
+      msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
      enddo
 
     ! RK step 3
      call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2)
      do j = 1,nmesh
-       msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
-       msh(j)%q = msh(j)%sol
+      msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
+      msh(j)%q = msh(j)%sol
      enddo
 
   !   check solution

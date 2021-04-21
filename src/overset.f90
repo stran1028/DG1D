@@ -164,7 +164,6 @@ contains
                do k = 1,mshA%nshp
                  mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) + wtmp(k)*flx
                enddo
-
                ! Handle mesh A R node flux
                wtmp = 1d0
                call shapefunction(mshA%nshp,x2,[x1,x2],wtmp,wtmp,dwtmp)

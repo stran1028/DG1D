@@ -13,7 +13,7 @@ subroutine output(iout,msh)
   !
 !  write(fname,'(A5,I1)') 'iblank.',iout
 !  open(unit=11,file=fname,form='formatted')
-  write(fname,'(A5,I3)') 'mesh.',iout
+  write(fname,'(A5,I0.3)') 'mesh.',iout
   open(unit=12,file=fname,form='formatted')
 
   do i=1,msh%nelem

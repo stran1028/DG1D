@@ -108,21 +108,6 @@ contains
     endif
   end subroutine flux
   !
-  subroutine volintstrong(dqtmp,vol)
-    !
-    implicit none
-    !
-    real*8, intent(in) :: dqtmp
-    real*8, intent(out) :: vol
-    !
-    if (index(pde_descriptor,'linear_advection') > 0 ) then
-     vol=a*dqtmp
-    else if (index(pde_descriptor,'burgers') > 0) then
-     write(*,*) 'Whoops. I will add this later'
-     call exit(1)
-    endif
-  end subroutine volintstrong
-  !
   subroutine volint(qtmp,vol)
     !
     implicit none
