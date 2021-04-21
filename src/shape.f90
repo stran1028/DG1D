@@ -55,9 +55,16 @@ contains
           dqval(1) = -1d0*q(1)
           qval(2)  = q(2)*(0.5d0+zi)
           dqval(2) = 1d0*q(2)
+        elseif(nshp.gt.2) then 
+          write(*,*) 'Shape functions not yet implemented. Exiting'
+          call exit(1)
         endif
       elseif(shptype.eq.'legendre') then 
         ! Evaluate legendre polynomial
+        if(nshp.gt.10) then 
+          write(*,*) 'Shape functions not yet implemented. Exiting'
+          call exit(1)
+        endif
         do i = 1,nshp
           do j = 1,i
             qval(i) = qval(i) + q(i)*legcoef(i,j)*zi**(j-1d0)
