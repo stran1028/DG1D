@@ -18,6 +18,9 @@ subroutine timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincom
       call fixfluxIncompleteElements(msh(1),msh(2),elemInfo2,nincomp2,consoverset)
       call fixfluxIncompleteElements(msh(2),msh(1),elemInfo1,nincomp1,consoverset)
    end if
+!   write(*,*) 'debug: ref mass  = ',msh(2)%mass(1,:,3)
+!   write(*,*) 'debug: mass e1 = ',msh(2)%mass(1,:,1)
+!   write(*,*) 'debug: rhs e1 = ',msh(2)%rhs(1,:,1)
    do n=1,nmesh
       ! Solve M dq = rhs
       call solvedq(msh(n),dt)

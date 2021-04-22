@@ -9,9 +9,9 @@ subroutine output(iout,msh)
   !
   integer :: i,j
   real*8 :: qout(msh%nshp),dqout(msh%nshp),q1,q2,error(1)
-  character*9 :: fname
+  character*22 :: fname
   !
-!  write(fname,'(A5,I1)') 'iblank.',iout
+!  write(fname,'(A7,I0.3)') 'iblank.',iout
 !  open(unit=11,file=fname,form='formatted')
   write(fname,'(A5,I0.3)') 'mesh.',iout
   open(unit=12,file=fname,form='formatted')

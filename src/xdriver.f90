@@ -20,7 +20,7 @@ program conservative_overset
   ! Inputs
   cfl = 0.01d0
   ainf = 1d0
-  consoverset = 0
+  consoverset = 1
 
   if(consoverset.eq.1) then 
     write(*,*) 'CONSERVATIVE OVERSET:'
@@ -34,7 +34,7 @@ program conservative_overset
   !call setshp('lagrange')
   call setshp('legendre')
   !
-  do order = 0,8
+  do order = 0,7
   do h = 1,4
     if(h.eq.1) then  
       dx = [0.2d0,0.1d0]
@@ -89,6 +89,9 @@ program conservative_overset
     rk = [1d0/4d0, 8d0/15d0,5d0/12d0, 3d0/4d0];
     do i=1,ntime
    
+!     write(*,*) '--------------------------'
+!     write(*,*) 'TIMESTEP ',i
+!     write(*,*) '--------------------------'
      ! RK step 1
      call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2)
      do j = 1,nmesh

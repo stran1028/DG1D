@@ -1,1 +1,1 @@
-rm *.o *.mod fort.* mesh.* aout* log *exe iblan*
+rm *.o *.mod fort.* mesh.* aout* log iblan*

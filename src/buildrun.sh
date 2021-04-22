@@ -1,4 +1,4 @@
-rm *.o *.mod *exe mesh.* log
+rm *.o *.mod *exe mesh.* log iblan*
 make -f makefile
 echo ' '
 echo 'Running...'
