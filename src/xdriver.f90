@@ -34,16 +34,16 @@ program conservative_overset
   !call setshp('lagrange')
   call setshp('legendre')
   !
-  do order = 0,0
-  do h = 2,2
+  do order = 0,8
+  do h = 1,4
     if(h.eq.1) then  
       dx = [0.2d0,0.1d0]
     elseif(h.eq.2) then 
-      dx = [0.1d0,0.05d0]
+      dx = [0.08d0,0.04d0]
     elseif(h.eq.3) then 
-      dx = [0.05d0,0.025d0]
+      dx = [0.01d0,0.005d0]
     elseif(h.eq.4) then 
-      dx = [0.025d0,0.0125d0]
+      dx = [0.02d0,0.01d0]
     endif
 
     ! Compute parameters
@@ -56,10 +56,11 @@ program conservative_overset
     write(*,*) '    cfl = ',cfl
     write(*,*) '    dt = ',dt
     write(*,*) '    ntime = ',ntime
+    write(*,*) '    test = ',cfl,minval(dx),ainf
     !
     ! Initialize the mesh(es)
     call init_mesh(msh(1),[-1d0,1d0],dx(1),1,order)
-    call init_mesh(msh(2),[-0.268d0,0.568d0],dx(2),0,order)
+    call init_mesh(msh(2),[-0.268d0,0.732d0],dx(2),0,order)
     !
     do n=1,nmesh
      call initvar(msh(n))
@@ -79,8 +80,9 @@ program conservative_overset
     end if
     !
     do n=1,nmesh
+     !call output(n,msh(n))
      call output(100*order+10*h+n,msh(n))
-     call computeMoments(msh(n),mom0(:,n),ainf,dt,ntime,err0(n))
+     call computeMoments(msh(n),mom0(:,n),err0(n))
     enddo
     !
     ! Iterate in time
@@ -129,6 +131,7 @@ program conservative_overset
     write(*,*) ' '
     write(*,*) '  FINAL OUTPUT: '
     do n=1,nmesh
+!       call output(nmesh+n,msh(n))
        call output(100*order+10*h+nmesh+n,msh(n))
        call computeMoments(msh(n),mom1(:,n),err1(n))
     enddo
@@ -141,6 +144,9 @@ program conservative_overset
     do n = 1,nmesh
       call clearMem(msh(n))
     enddo
+    if (allocated(elemInfo1)) deallocate(elemInfo1)
+    if (allocated(elemInfo2)) deallocate(elemInfo2)
+
 
   enddo ! mesh sweep
   enddo ! p sweep
