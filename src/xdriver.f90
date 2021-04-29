@@ -20,7 +20,7 @@ program conservative_overset
   ! Inputs
   cfl = 0.01d0
   ainf = 1d0
-  consoverset = 0
+  consoverset = 1
 
   if(consoverset.eq.1) then 
     write(*,*) 'CONSERVATIVE OVERSET:'
@@ -35,15 +35,17 @@ program conservative_overset
   call setshp('legendre')
   !
   do order = 1,6
-  do h = 1,4
+  do h = 1,5
     if(h.eq.1) then  
-      dx = [0.2d0,0.1d0]
+      dx = [0.25d0,0.125d0]
     elseif(h.eq.2) then 
-      dx = [0.08d0,0.04d0]
+      dx = [0.125d0,0.0625d0]
     elseif(h.eq.3) then 
-      dx = [0.01d0,0.005d0]
+      dx = [0.0625d0,0.03125d0]
     elseif(h.eq.4) then 
-      dx = [0.02d0,0.01d0]
+      dx = [0.03125d0,0.015625d0]
+    elseif(h.eq.5) then 
+      dx = [0.015625d0,0.0078125d0]
     endif
 
     ! Compute parameters
