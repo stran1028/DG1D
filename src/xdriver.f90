@@ -34,7 +34,7 @@ program conservative_overset
   !call setshp('lagrange')
   call setshp('legendre')
   !
-  do order = 1,7
+  do order = 1,6
   do h = 1,4
     if(h.eq.1) then  
       dx = [0.2d0,0.1d0]
@@ -64,6 +64,9 @@ program conservative_overset
     do n=1,nmesh
      call initvar(msh(n))
     enddo
+    ! Store initial conditions (exact solution)
+    msh(1)%q0 = msh(1)%q 
+    msh(2)%q0 = msh(2)%q 
     !
     ! Blank out coarser overlapping cells 
     if(nmesh>1) then 

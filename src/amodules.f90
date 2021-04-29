@@ -15,6 +15,7 @@ module code_types
      integer, allocatable :: iblank(:,:) !< iblank for end-nodes
      !
      real*8, allocatable :: dq(:,:,:)   !< q-variables (nfields,nshp,nelem)
+     real*8, allocatable :: q0(:,:,:)   !< intermediate q-variables (nfields,nshp,nelem)
      real*8, allocatable :: q(:,:,:)   !< intermediate q-variables (nfields,nshp,nelem)
      real*8, allocatable :: sol(:,:,:)   !< final q-variables (nfields,nshp,nelem)
      real*8, allocatable :: x(:)       !< end-node coords
