@@ -1,2 +1,1 @@
 - move node points to gauss points and remove calls to shape to speed up code
--

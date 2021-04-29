@@ -99,7 +99,7 @@ contains
     !
     type(mesh), intent(in) :: msh
     integer, intent(out) :: nincomp
-    real*8, allocatable, intent(out) :: elemInfo(:)
+    real*8, allocatable, intent(out) :: elemInfo(:,:)
     integer :: n1,n2,ib1,ib2,i,j,k,nrows
     !
     nincomp=0
@@ -116,13 +116,13 @@ contains
     ! store info on the incomplete elems
     ! modified for DG, need both q endpts 
     ! and rhs vector
-    allocate(elemInfo(nincomp))
+    allocate(elemInfo(3,nincomp))
     k = 1
     do i=1,msh%nelem
        ib1=msh%iblank(1,i)
        ib2=msh%iblank(2,i)
        if ( ib1*ib2 .le. 0) then
-          elemInfo(k) = i
+          elemInfo(1,k) = i
           k=k+1
        endif
     enddo
@@ -136,7 +136,7 @@ contains
     implicit none
     type(mesh), intent(inout) :: mshA,mshB
     integer, intent(in) :: nincomp,consoverset
-    real*8, intent(inout) :: elemInfo(nincomp)
+    real*8, intent(inout) :: elemInfo(3,nincomp)
 !    real*8, intent(inout) :: elemInfo((3+2*msh%nshp)*nincomp)
     !
     integer :: i,j,k,e,nrows,aa,bb,cc,eid,neigh
@@ -150,7 +150,7 @@ contains
     ! msh = mesh info of mesh B
     !
      iloop: do i=1,nincomp       ! Loop through incomplete elem of mesh A
-       eid = elemInfo(i)
+       eid = elemInfo(1,i)
        x1=mshA%xe(1,eid) 
        x2=mshA%xe(2,eid) 
        qA=mshA%q(1,:,eid) 
@@ -169,11 +169,10 @@ contains
                ! mshA will remove first half of overlap (from x1 to 0.5*(x1+y2))
                if(consoverset.eq.1) then 
                  xcut = [x1,0.5d0*(x1+y2)]
-                 xrem = [xcut(2),x2]
                else
                  xcut = [x1,x1]
-                 xrem = [x1,x2]
                endif
+               xrem = elemInfo(2:3,i)
 
                ! add intermesh flux from mesh B interior to mesh A L node
                wtmp = 1d0
@@ -213,11 +212,10 @@ contains
                ! msh A will remove second half of overlap (from 0.5(y1+x2) to x2
                if(consoverset.eq.1) then 
                  xcut = [0.5d0*(y1+x2),x2]
-                 xrem = [x1,xcut(1)]
                else
                  xcut = [x2,x2]
-                 xrem = [x1,x2]
                endif
+               xrem = elemInfo(2:3,i)
 
                ! Handle mesh A L node flux 
                wtmp = 1d0
@@ -279,14 +277,14 @@ contains
     enddo iloop
   end subroutine fixFluxIncompleteElements
   !
-  subroutine fixMassIncompleteElements(mshB,mshA,elemInfo,nincomp)
+  subroutine fixMassIncompleteElements(mshB,mshA,elemInfo,nincomp,consoverset)
     use bases
 
     ! Subtract half of overlap section from mesh A (stored in elemInfo)
     implicit none
     type(mesh), intent(inout) :: mshA,mshB
-    integer, intent(in) :: nincomp
-    real*8, intent(inout) :: elemInfo(nincomp)
+    integer, intent(in) :: nincomp,consoverset
+    real*8, intent(inout) :: elemInfo(3,nincomp)
 !    real*8, intent(inout) :: elemInfo((3+2*msh%nshp)*nincomp)
     !
     integer :: i,j,k,e,nrows,aa,bb,cc,eid,index1
@@ -298,7 +296,7 @@ contains
     ! msh = mesh info of mesh B
     !
      iloop: do i=1,nincomp       ! Loop through incomplete elem of mesh A
-       eid = elemInfo(i)
+       eid = elemInfo(1,i)
        x1=mshA%xe(1,eid) 
        x2=mshA%xe(2,eid) 
        qA=mshA%q(1,:,eid) 
@@ -316,36 +314,41 @@ contains
                ! Overlap is between x1 and y2
                ! mshA will remove first half of overlap (from x1 to 0.5*(x1+y2))
                xcut = [x1,0.5d0*(x1+y2)]
-
+               if(consoverset.eq.1) then 
+                 elemInfo(2:3,i) = [xcut(2),x2]
+               else
+                 elemInfo(2:3,i) = [x1,x2]
+               endif
              elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R ndoe of mesh A is inside of mesh B elem          
                ! Overlap is between y1 and x2
                ! msh A will remove second half of overlap (from 0.5(y1+x2) to x2
                xcut = [0.5d0*(y1+x2),x2]
-
+               if(consoverset.eq.1) then 
+                 elemInfo(2:3,i) = [x1,xcut(1)]
+               else
+                 elemInfo(2:3,i) = [x1,x2]
+               endif
              endif
              lcut = xcut(2)-xcut(1)
              xc = 0.5*(xcut(1)+xcut(2))   ! center of section to be removed
                
              ! Adjust mass matrix 
-             !write(*,*) ' '
-             !write(*,*) 'xcut,x =  ',xcut,x1,x2
-             !write(*,*) 'mass1 = ',mshA%mass(:,:,eid)
-             do aa = 1,mshA%ngauss
-               ! get shapefunction from msh A at quad pts of cut section
-               xg = mshA%xgauss(aa)*lcut+xc
-               wtmp = 1d0
-               call shapefunction(mshA%nshp,xg,[x1,x2],wtmp,wtmp,dwtmp)
-               do bb = 1,mshA%nshp
+             if(consoverset.eq.1) then 
+               do aa = 1,mshA%ngauss
+                 ! get shapefunction from msh A at quad pts of cut section
+                 xg = mshA%xgauss(aa)*lcut+xc
+                 wtmp = 1d0
+                 call shapefunction(mshA%nshp,xg,[x1,x2],wtmp,wtmp,dwtmp)
+                 do bb = 1,mshA%nshp
                  do cc = 1,mshA%nshp
-                    index1 = (bb-1)*mshA%nshp+cc
-                    ! Fix mass matrix
-                    mshA%mass(:,index1,eid) = mshA%mass(:,index1,eid) - wtmp(bb)*wtmp(cc)*mshA%wgauss(aa)*lcut
+                      index1 = (bb-1)*mshA%nshp+cc
+                      ! Fix mass matrix
+                      mshA%mass(:,index1,eid) = mshA%mass(:,index1,eid) - wtmp(bb)*wtmp(cc)*mshA%wgauss(aa)*lcut
                  enddo ! nshp
-
-               enddo ! nshp
-             enddo ! ngauss
-             !write(*,*) 'mass2 = ',mshA%mass(:,:,eid)
-             !write(*,*) ' '
+  
+                 enddo ! nshp
+               enddo ! ngauss
+             endif
 
              cycle iloop
           endif

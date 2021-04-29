@@ -14,9 +14,6 @@ subroutine solveDQ(msh,dt)
     call forwprop(L,msh%rhs(1,:,i),msh%nshp,y)
     call backprop(U,y,msh%nshp,msh%dq(1,:,i))
 
-
-    if(msh%iblank(1,i)*msh%iblank(2,i).eq.-1) then 
-    endif
   enddo
   !
 end subroutine solveDQ

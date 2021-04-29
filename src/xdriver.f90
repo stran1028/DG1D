@@ -9,7 +9,7 @@ program conservative_overset
   integer :: i,ntime,n,j,k,m,order,consoverset
   real*8 :: dt,mom1(2,nmesh),mom0(2,nmesh)
   real*8 :: err0(nmesh),err1(nmesh)
-  real*8, allocatable :: elemInfo1(:),elemInfo2(:)
+  real*8, allocatable :: elemInfo1(:,:),elemInfo2(:,:)
   integer :: nincomp1,nincomp2,nrk
   real*8 :: rk(4),dx(nmesh),ainf,cfl
   integer :: h
@@ -20,7 +20,7 @@ program conservative_overset
   ! Inputs
   cfl = 0.01d0
   ainf = 1d0
-  consoverset = 1
+  consoverset = 0
 
   if(consoverset.eq.1) then 
     write(*,*) 'CONSERVATIVE OVERSET:'
@@ -34,7 +34,7 @@ program conservative_overset
   !call setshp('lagrange')
   call setshp('legendre')
   !
-  do order = 0,7
+  do order = 1,7
   do h = 1,4
     if(h.eq.1) then  
       dx = [0.2d0,0.1d0]
@@ -56,7 +56,6 @@ program conservative_overset
     write(*,*) '    cfl = ',cfl
     write(*,*) '    dt = ',dt
     write(*,*) '    ntime = ',ntime
-    write(*,*) '    test = ',cfl,minval(dx),ainf
     !
     ! Initialize the mesh(es)
     call init_mesh(msh(1),[-1d0,1d0],dx(1),1,order)
@@ -73,17 +72,16 @@ program conservative_overset
       call fixOverlap(msh(2),msh(1))
       call findIncompleteElements(msh(1),elemInfo1,nincomp1)
       call findIncompleteElements(msh(2),elemInfo2,nincomp2)
-      if(consoverset.eq.1) then 
-        call fixMassIncompleteElements(msh(1),msh(2),elemInfo2,nincomp2)
-        call fixMassIncompleteElements(msh(2),msh(1),elemInfo1,nincomp1)
-      endif
+      call fixMassIncompleteElements(msh(1),msh(2),elemInfo2,nincomp2,consoverset)
+      call fixMassIncompleteElements(msh(2),msh(1),elemInfo1,nincomp1,consoverset)
     end if
     !
     do n=1,nmesh
      !call output(n,msh(n))
      call output(100*order+10*h+n,msh(n))
-     call computeMoments(msh(n),mom0(:,n),err0(n))
     enddo
+    call computeMoments(msh(1),mom0(:,1),err0(1),nincomp1,elemInfo1)
+    call computeMoments(msh(2),mom0(:,2),err0(2),nincomp2,elemInfo2)
     !
     ! Iterate in time
     rk = [1d0/4d0, 8d0/15d0,5d0/12d0, 3d0/4d0];
@@ -94,11 +92,11 @@ program conservative_overset
 !     write(*,*) '--------------------------'
      ! RK step 1
      call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2)
+
      do j = 1,nmesh
        ! Euler 1st order
 !       msh(j)%q=msh(j)%q+dt*msh(j)%dq
 !       msh(j)%sol=msh(j)%q
-
       msh(j)%q=msh(j)%sol+rk(2)*dt*msh(j)%dq
       msh(j)%sol=msh(j)%sol+rk(1)*dt*msh(j)%dq
      enddo
@@ -136,8 +134,10 @@ program conservative_overset
     do n=1,nmesh
 !       call output(nmesh+n,msh(n))
        call output(100*order+10*h+nmesh+n,msh(n))
-       call computeMoments(msh(n),mom1(:,n),err1(n))
     enddo
+    call computeMoments(msh(1),mom1(:,1),err1(1),nincomp1,elemInfo1)
+    call computeMoments(msh(2),mom1(:,2),err1(2),nincomp2,elemInfo2)
+
     write(*,*) '  Initial L2 error: ',sum(err0(:))
     write(*,*) '  Conservation error: ',sum(mom0(1,:)),sum(mom1(1,:)),sum(mom1(1,:))-sum(mom0(1,:))
     write(*,*) '  Final L2 error, diff: ',sum(err1(:)),sum(err1(:))-sum(err0(:))
@@ -149,7 +149,6 @@ program conservative_overset
     enddo
     if (allocated(elemInfo1)) deallocate(elemInfo1)
     if (allocated(elemInfo2)) deallocate(elemInfo2)
-
 
   enddo ! mesh sweep
   enddo ! p sweep
