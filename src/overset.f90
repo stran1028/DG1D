@@ -129,19 +129,18 @@ contains
     !
   end subroutine findIncompleteElements
   !
-  subroutine fixFluxIncompleteElements(mshB,mshA,elemInfo,nincomp,consoverset)
+  subroutine fixFluxIncompleteElements(mshB,mshA,elemInfo,nincomp,consoverset,foverlap)
     use bases
 
     ! Subtract half of overlap section from mesh A (stored in elemInfo)
     implicit none
     type(mesh), intent(inout) :: mshA,mshB
     integer, intent(in) :: nincomp,consoverset
-    real*8, intent(inout) :: elemInfo(3,nincomp)
-!    real*8, intent(inout) :: elemInfo((3+2*msh%nshp)*nincomp)
+    real*8, intent(inout) :: elemInfo(3,nincomp),foverlap
     !
     integer :: i,j,k,e,nrows,aa,bb,cc,eid,neigh
     real*8 :: x1,x2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp)
-    real*8 :: xrem(2),xcut(2),xc,lcut,xg,vol,flx,qL,qR,fact
+    real*8 :: xrem(2),xcut(2),xc,lcut,xg,vol,flx,qL,qR,fact,xfac
     real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp)
     real*8 ::qtmp(mshA%nshp),dqtmp(mshA%nshp),dq,dvol(mshA%nshp),dflx(mshA%nshp)
 
@@ -164,11 +163,17 @@ contains
                  mshB%iblank(2,j) .ne.1) cycle eloop ! skip if element blanked
              qB=mshB%q(1,:,j)
 
+             if(mshA%dx(eid).lt.mshB%dx(j)) then ! A is fine mesh
+               xfac = foverlap
+             else ! A is coarse mesh
+               xfac = 1d0-foverlap
+             endif
+
              if ((x1-y1)*(x1-y2) .le. 0.0) then ! L node of mesh A is inside of mesh B elem
-               ! Overlap is between x1 and y2
-               ! mshA will remove first half of overlap (from x1 to 0.5*(x1+y2))
+               ! Full overlap is between x1 and y2
+               ! mshA will remove first section of overlap 
                if(consoverset.eq.1) then 
-                 xcut = [x1,0.5d0*(x1+y2)]
+                 xcut = [x1,x1+xfac*(y2-x1)]
                else
                  xcut = [x1,x1]
                endif
@@ -199,19 +204,11 @@ contains
                  mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) - wtmp(k)*flx
                enddo
 
-!               write(*,*) '  L side , eid: ',eid,xcut
-!               write(*,*) '    x1,x2: ',x1,x2
-!               write(*,*) '    y1,y2: ',y1,y2
-!               write(*,*) '    xcut: ',xcut
-!               write(*,*) '    qA: ',qA
-!               write(*,*) '    qB: ',qB
-!               write(*,*) '    ql,qr,flx: ',ql,qr,flx
-               
              elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem          
                ! Overlap is between y1 and x2
                ! msh A will remove second half of overlap (from 0.5(y1+x2) to x2
                if(consoverset.eq.1) then 
-                 xcut = [0.5d0*(y1+x2),x2]
+                 xcut = [x2-xfac*(x2-y1),x2]
                else
                  xcut = [x2,x2]
                endif
@@ -242,14 +239,6 @@ contains
                  mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) - wtmp(k)*flx
                enddo
 
-!               write(*,*) '  R side eid,xcut: ',eid,xcut
-!               write(*,*) '    x1,x2: ',x1,x2
-!               write(*,*) '    y1,y2: ',y1,y2
-!               write(*,*) '    xcut: ',xcut
-!               write(*,*) '    qA: ',qA
-!               write(*,*) '    qB: ',qB
-!               write(*,*) '    ql,qr,flx: ',ql,qr,flx
-
              endif
              fact = (xrem(2)-xrem(1))/(x2-x1)
                
@@ -277,19 +266,18 @@ contains
     enddo iloop
   end subroutine fixFluxIncompleteElements
   !
-  subroutine fixMassIncompleteElements(mshB,mshA,elemInfo,nincomp,consoverset)
+  subroutine fixMassIncompleteElements(mshB,mshA,elemInfo,nincomp,consoverset,foverlap)
     use bases
 
     ! Subtract half of overlap section from mesh A (stored in elemInfo)
     implicit none
     type(mesh), intent(inout) :: mshA,mshB
     integer, intent(in) :: nincomp,consoverset
-    real*8, intent(inout) :: elemInfo(3,nincomp)
-!    real*8, intent(inout) :: elemInfo((3+2*msh%nshp)*nincomp)
+    real*8, intent(inout) :: elemInfo(3,nincomp),foverlap
     !
     integer :: i,j,k,e,nrows,aa,bb,cc,eid,index1
     real*8 :: x1,x2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp)
-    real*8 :: xcut(2),xc,lcut,xg
+    real*8 :: xcut(2),xc,lcut,xg,xfac
     real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp)
     !
     ! elemInfo = incomplete elements on mesh A
@@ -310,19 +298,25 @@ contains
                  mshB%iblank(2,j) .ne.1) cycle eloop ! skip if incomplete mesh B elem
              qB=mshB%q(1,:,j)
 
+             if(mshA%dx(eid).lt.mshB%dx(j)) then ! A is fine mesh
+               xfac = foverlap
+             else ! A is coarse mesh
+               xfac = 1d0-foverlap
+             endif
+
              if ((x1-y1)*(x1-y2) .le. 0.0) then ! L node of mesh A is inside of mesh B elem
                ! Overlap is between x1 and y2
                ! mshA will remove first half of overlap (from x1 to 0.5*(x1+y2))
-               xcut = [x1,0.5d0*(x1+y2)]
+               xcut = [x1,x1+xfac*(y2-x1)]
                if(consoverset.eq.1) then 
                  elemInfo(2:3,i) = [xcut(2),x2]
                else
                  elemInfo(2:3,i) = [x1,x2]
                endif
-             elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R ndoe of mesh A is inside of mesh B elem          
+             elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem          
                ! Overlap is between y1 and x2
                ! msh A will remove second half of overlap (from 0.5(y1+x2) to x2
-               xcut = [0.5d0*(y1+x2),x2]
+               xcut = [x2-xfac*(x2-y1),x2]
                if(consoverset.eq.1) then 
                  elemInfo(2:3,i) = [x1,xcut(1)]
                else

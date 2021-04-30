@@ -11,7 +11,7 @@ program conservative_overset
   real*8 :: err0(nmesh),err1(nmesh)
   real*8, allocatable :: elemInfo1(:,:),elemInfo2(:,:)
   integer :: nincomp1,nincomp2,nrk
-  real*8 :: rk(4),dx(nmesh),ainf,cfl
+  real*8 :: rk(4),dx(nmesh),ainf,cfl,foverlap
   integer :: h
   !
   type(mesh), allocatable :: msh(:)
@@ -21,7 +21,13 @@ program conservative_overset
   cfl = 0.01d0
   ainf = 1d0
   consoverset = 1
-
+  foverlap = 0.5 ! 0 = coarse mesh clips all, 0.5 = both clip half, 1 = fine mesh clip all
+  !
+  if((foverlap.gt.1d0).or.(foverlap.lt.0d0)) then 
+    write(*,*) 'foverlap wrong. try again.'
+    call exit(1)
+  endif
+  !
   if(consoverset.eq.1) then 
     write(*,*) 'CONSERVATIVE OVERSET:'
   else
@@ -34,9 +40,11 @@ program conservative_overset
   !call setshp('lagrange')
   call setshp('legendre')
   !
-  do order = 1,6
-  do h = 1,5
-    if(h.eq.1) then  
+  do order = 1,1
+  do h = 5,5
+    if(h.eq.0) then  
+      dx = [0.5d0,0.25d0]
+    elseif(h.eq.1) then  
       dx = [0.25d0,0.125d0]
     elseif(h.eq.2) then 
       dx = [0.125d0,0.0625d0]
@@ -77,8 +85,10 @@ program conservative_overset
       call fixOverlap(msh(2),msh(1))
       call findIncompleteElements(msh(1),elemInfo1,nincomp1)
       call findIncompleteElements(msh(2),elemInfo2,nincomp2)
-      call fixMassIncompleteElements(msh(1),msh(2),elemInfo2,nincomp2,consoverset)
-      call fixMassIncompleteElements(msh(2),msh(1),elemInfo1,nincomp1,consoverset)
+      call fixMassIncompleteElements(msh(1),msh(2),elemInfo2,nincomp2,&
+              consoverset,foverlap)
+      call fixMassIncompleteElements(msh(2),msh(1),elemInfo1,nincomp1,&
+              consoverset,foverlap)
     end if
     !
     do n=1,nmesh
@@ -96,7 +106,7 @@ program conservative_overset
 !     write(*,*) 'TIMESTEP ',i
 !     write(*,*) '--------------------------'
      ! RK step 1
-     call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2)
+     call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap)
 
      do j = 1,nmesh
        ! Euler 1st order
@@ -107,13 +117,13 @@ program conservative_overset
      enddo
 
      ! RK step 2
-     call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2)
+     call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap)
      do j = 1,nmesh
       msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
      enddo
 
     ! RK step 3
-     call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2)
+     call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap)
      do j = 1,nmesh
       msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
       msh(j)%q = msh(j)%sol
