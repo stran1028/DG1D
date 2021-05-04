@@ -6,11 +6,12 @@ program conservative_overset
   implicit none
   !
   integer, parameter :: nmesh=2
-  integer :: i,ntime,n,j,k,m,order,consoverset
+  integer :: i,s,ntime,n,j,k,m,order,consoverset
   real*8 :: dt,mom1(2,nmesh),mom0(2,nmesh)
-  real*8 :: err0(nmesh),err1(nmesh)
+  real*8 :: err(nmesh)
   real*8, allocatable :: elemInfo1(:,:),elemInfo2(:,:)
   integer :: nincomp1,nincomp2,nrk
+  integer :: conswitch,noverlap
   real*8 :: rk(4),dx(nmesh),ainf,cfl,foverlap
   integer :: h
   !
@@ -20,28 +21,54 @@ program conservative_overset
   ! Inputs
   cfl = 0.01d0
   ainf = 1d0
-  consoverset = 1
-  foverlap = 0.5 ! 0 = coarse mesh clips all, 0.5 = both clip half, 1 = fine mesh clip all
+  foverlap = 0.0 ! 0 = coarse mesh clips all, 0.5 = both clip half, 1 = fine mesh clip all
   !
   if((foverlap.gt.1d0).or.(foverlap.lt.0d0)) then 
     write(*,*) 'foverlap wrong. try again.'
     call exit(1)
   endif
   !
-  if(consoverset.eq.1) then 
-    write(*,*) 'CONSERVATIVE OVERSET:'
-  else
-    write(*,*) 'BASELINE (ABUTTING METHOD):'
-  endif
 
   ! Set up the problem and bases types
   call set_type('linear_advection',ainf)
   !call set_type('burgers')
-  !call setshp('lagrange')
-  call setshp('legendre')
   !
-  do order = 1,1
-  do h = 5,5
+  do conswitch = 1,1
+  do s = 1,2
+  do noverlap = 3,3
+  do order = 1,5
+  do h = 0,5
+
+    if ((conswitch.eq.0).and.(noverlap.gt.1)) cycle 
+
+    write(*,*) '----------------------------------'
+    write(*,*) 'INPUTS: '
+
+    if(conswitch.eq.0) then 
+      consoverset = 0
+      write(*,*) '    BASELINE (ABUTTING METHOD):'
+    else
+      consoverset = 1
+      write(*,*) '    CONSERVATIVE OVERSET:'
+    endif 
+
+    if(noverlap.eq.1) then 
+       foverlap = 0.0d0         ! Coarse mesh clips all of overlap
+    elseif(noverlap.eq.2) then 
+       foverlap = 0.5d0         ! Both meshes clip 0.5 overlap each
+    elseif(noverlap.eq.3) then 
+       foverlap = 1.0d0         ! Fine mesh clips all of overlap
+    endif
+    write(*,*) '    foverlap = ',foverlap
+    
+    if(s.eq.1) then 
+      call setshp('lagrange')
+      write(*,*) '    LAGRANGE SHAPE FUNCTIONS'
+    else
+      call setshp('legendre')
+      write(*,*) '    LEGENDRE SHAPE FUNCTIONS'
+    endif
+
     if(h.eq.0) then  
       dx = [0.5d0,0.25d0]
     elseif(h.eq.1) then  
@@ -58,9 +85,7 @@ program conservative_overset
 
     ! Compute parameters
     dt=cfl*minval(dx)/ainf
-    ntime = nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
-    write(*,*) '----------------------------------'
-    write(*,*) '  INPUTS: '
+    ntime =   nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
     write(*,*) '    h, dx = ',h,dx
     write(*,*) '    p = ',order
     write(*,*) '    cfl = ',cfl
@@ -73,10 +98,12 @@ program conservative_overset
     !
     do n=1,nmesh
      call initvar(msh(n))
+     msh(n)%sol=msh(n)%q
     enddo
     ! Store initial conditions (exact solution)
     msh(1)%q0 = msh(1)%q 
     msh(2)%q0 = msh(2)%q 
+
     !
     ! Blank out coarser overlapping cells 
     if(nmesh>1) then 
@@ -91,12 +118,12 @@ program conservative_overset
               consoverset,foverlap)
     end if
     !
+
     do n=1,nmesh
-     !call output(n,msh(n))
-     call output(100*order+10*h+n,msh(n))
+!     call output(100*order+10*h+n,msh(n))
     enddo
-    call computeMoments(msh(1),mom0(:,1),err0(1),nincomp1,elemInfo1)
-    call computeMoments(msh(2),mom0(:,2),err0(2),nincomp2,elemInfo2)
+    call computeMoments(msh(1),mom0(:,1),err(1),nincomp1,elemInfo1)
+    call computeMoments(msh(2),mom0(:,2),err(2),nincomp2,elemInfo2)
     !
     ! Iterate in time
     rk = [1d0/4d0, 8d0/15d0,5d0/12d0, 3d0/4d0];
@@ -147,15 +174,13 @@ program conservative_overset
     write(*,*) ' '
     write(*,*) '  FINAL OUTPUT: '
     do n=1,nmesh
-!       call output(nmesh+n,msh(n))
-       call output(100*order+10*h+nmesh+n,msh(n))
+!       call output(100*order+10*h+nmesh+n,msh(n))
     enddo
-    call computeMoments(msh(1),mom1(:,1),err1(1),nincomp1,elemInfo1)
-    call computeMoments(msh(2),mom1(:,2),err1(2),nincomp2,elemInfo2)
+    call computeMoments(msh(1),mom1(:,1),err(1),nincomp1,elemInfo1)
+    call computeMoments(msh(2),mom1(:,2),err(2),nincomp2,elemInfo2)
 
-    write(*,*) '  Initial L2 error: ',sum(err0(:))
     write(*,*) '  Conservation error: ',sum(mom0(1,:)),sum(mom1(1,:)),sum(mom1(1,:))-sum(mom0(1,:))
-    write(*,*) '  Final L2 error, diff: ',sum(err1(:)),sum(err1(:))-sum(err0(:))
+    write(*,*) '  Final L2 error: ',sqrt(sum(err(:)))
     write(*,*) '----------------------------------'
     !
     ! Clear memory
@@ -167,4 +192,7 @@ program conservative_overset
 
   enddo ! mesh sweep
   enddo ! p sweep
+  enddo
+  enddo
+  enddo
 end program conservative_overset

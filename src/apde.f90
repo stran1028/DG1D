@@ -64,6 +64,9 @@ contains
       call forwprop(L,f,msh%nshp,y)
       call backprop(U,y,msh%nshp,msh%q(1,:,i))
 
+!       msh%q(1,:,:) = 0d0
+!       msh%q(1,1,:) = 1d0
+
     enddo
   end subroutine initqleg
   !

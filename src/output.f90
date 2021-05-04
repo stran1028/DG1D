@@ -20,12 +20,15 @@ subroutine output(iout,msh)
     write(11,*) i,msh%xe(1,i),msh%xe(2,i),msh%iblank(:,i)
 
     if (maxval(msh%iblank(:,i)) == 1) then 
-       do j = 1,msh%nshp        
+       do j = 1,msh%nshp       
          call shapefunction(msh%nshp,msh%x(msh%e2n(j,i)),[msh%xe(1,i),msh%xe(2,i)],msh%sol(1,:,i),qout,dqout)
+!         write(*,*) 'output debug' 
+!         write(*,*) '  x,xe = ',msh%x(msh%e2n(j,i)),msh%xe(1,i),msh%xe(2,i)
+!         write(*,*) '  sol =',msh%sol(1,:,i)
+!         write(*,*) '  qout =',qout
          q1 = sum(qout)
 
-         call initq(msh%x(msh%e2n(j,i)),error)
-         error = error-q1
+         error = msh%q0(1,j,i)-q1
          write(12,*) msh%x(msh%e2n(j,i)),q1, error
       enddo
 

@@ -55,7 +55,76 @@ contains
           dqval(1) = -1d0*q(1)
           qval(2)  = q(2)*(0.5d0+zi)
           dqval(2) = 1d0*q(2)
-        elseif(nshp.gt.2) then 
+        elseif(nshp.eq.3) then 
+          qval(1)  = q(1)*(2d0*zi**2d0 - zi)
+          dqval(1) = q(1)*(4d0*zi-1d0)
+          qval(2)  = q(2)*(-4d0*zi**2d0 + 1d0)
+          dqval(2) = q(2)*(-8d0*zi)
+          qval(3)  = q(3)*(2d0*zi**2d0 + zi)
+          dqval(3) = q(3)*(4d0*zi+1d0) 
+        elseif(nshp.eq.4) then 
+          qval(1)  = q(1)*(-4.5d0*zi**3d0 + 2.25*zi**2d0 + 0.125*zi-0.0625)
+          dqval(1) = q(1)*(-13.5d0*zi**2d0 + 4.5d0*zi + 0.125)
+          qval(2)  = q(2)*(13.5d0*zi**3d0 - 2.25d0*zi**2d0 - 3.375*zi + 0.5625)
+          dqval(2) = q(2)*( 40.5d0*zi**2d0 - 4.5d0*zi - 3.375)
+          qval(3)  = q(3)*(-13.5d0*zi**3d0 - 2.25d0*zi**2d0 + 3.375*zi + 0.5625)
+          dqval(3) = q(3)*(-40.5d0*zi**2d0 - 4.5d0*zi + 3.375)
+          qval(4)  = q(4)*( 4.5d0*zi**3d0 + 2.25*zi**2d0 - 0.125*zi-0.0625)
+          dqval(4) = q(4)*( 13.5d0*zi**2d0 + 4.5d0*zi - 0.125)
+        elseif(nshp.eq.5) then 
+          qval(1) = q(1)*(32d0/3d0*zi**4d0 - 16d0/3d0*zi**3d0 -2d0/3d0*zi**2d0 &
+                        + 1d0/3d0*zi)
+          qval(2) = q(2)*(-128d0/3d0*zi**4d0 + 32d0/3d0*zi**3d0 &
+                          + 32d0/3d0*zi**2d0 - 8d0/3d0*zi)
+          qval(3) = q(3)*(64d0*zi**4d0 - 20d0*zi**2d0 + 1d0)
+          qval(4) = q(4)*(-128d0/3d0*zi**4d0 - 32d0/3d0*zi**3d0 &
+                          + 32d0/3d0*zi**2d0 + 8d0/3d0*zi)
+          qval(5) = q(5)*(32d0/3d0*zi**4d0 + 16d0/3d0*zi**3d0 -2d0/3d0*zi**2d0 &
+                        - 1d0/3d0*zi)
+          dqval(1) = q(1)*(128d0/3d0*zi**3d0 - 16d0*zi**2d0-4d0/3d0*zi+1d0/3d0 )
+          dqval(2) = q(2)*(-512d0/3d0*zi**3d0+32d0*zi**2d0 + 64d0/3d0*zi-8d0/3d0)
+          dqval(3) = q(3)*(256d0*zi**3d0-40d0*zi) 
+          dqval(4) = q(4)*(-512d0/3d0*zi**3d0-32d0*zi**2d0 + 64d0/3d0*zi+8d0/3d0)
+          dqval(5) = q(5)*(128d0/3d0*zi**3d0 + 16d0*zi**2d0-4d0/3d0*zi-1d0/3d0 )
+        elseif(nshp.eq.6) then 
+          qval(1) = q(1)*( -625d0/24d0*zi**5d0 + 625d0/48d0*zi**4d0 &
+                           +125d0/48d0*zi**3d0 - 125d0/96d0*zi**2d0 &
+                           - 3d0/128d0*zi      + 3d0/256d0)
+          qval(2) = q(2)*( 3125d0/24d0*zi**5d0 - 625d0/16d0*zi**4d0 & 
+                          -1625d0/48d0*zi**3d0 + 325d0/32d0*zi**2d0 &
+                          +125d0/384d0*zi      - 25d0/256d0)
+          qval(3) = q(3)*(-3125d0/12d0*zi**5d0 + 625d0/24d0*zi**4d0 &
+                          +2125d0/24d0*zi**3d0 - 425d0/48d0*zi**2d0 &
+                          -375d0/64d0*zi       + 75d0/128d0)
+          qval(4) = q(4)*( 3125d0/12d0*zi**5d0 + 625d0/24d0*zi**4d0 &
+                          -2125d0/24d0*zi**3d0 - 425d0/48d0*zi**2d0 &
+                          +375d0/64d0*zi       + 75d0/128d0)
+          qval(5) = q(5)*(-3125d0/24d0*zi**5d0 - 625d0/16d0*zi**4d0 & 
+                          +1625d0/48d0*zi**3d0 + 325d0/32d0*zi**2d0 &
+                          -125d0/384d0*zi      - 25d0/256d0)
+          qval(6) = q(6)*(  625d0/24d0*zi**5d0 + 625d0/48d0*zi**4d0 &
+                           -125d0/48d0*zi**3d0 - 125d0/96d0*zi**2d0 &
+                           + 3d0/128d0*zi      + 3d0/256d0)
+
+          dqval(1) = q(1)*(-3125d0/24d0*zi**4d0+625d0/12d0*zi**3d0 &
+                            +125d0/16d0*zi**2d0-125d0/48d0*zi&
+                            -3d0/128d0)
+          dqval(2) = q(2)*(15625d0/24d0*zi**4d0-625d0/4d0*zi**3d0 &
+                           -1625d0/16d0*zi**2d0+325d0/16d0*zi&
+                           +125d0/384d0)
+          dqval(3) = q(3)*(-15625d0/12d0*zi**4d0+625d0/6d0*zi**3d0 &
+                           +2125d0/8d0*zi**2d0 -425d0/24d0*zi &
+                           - 375d0/64d0)
+          dqval(4) = q(4)*(15625d0/12d0*zi**4d0+625d0/6d0*zi**3d0 &
+                          -2125d0/8d0*zi**2d0 -425d0/24d0*zi &
+                           + 375d0/64d0)
+          dqval(5) = q(5)*(-15625d0/24d0*zi**4d0-625d0/4d0*zi**3d0 &
+                           +1625d0/16d0*zi**2d0+325d0/16d0*zi &
+                           -125d0/384d0)
+          dqval(6) = q(6)*(3125d0/24d0*zi**4d0+625d0/12d0*zi**3d0 &
+                           -125d0/16d0*zi**2d0 - 125d0/48d0*zi &
+                           +3d0/128d0)
+        elseif(nshp.gt.6) then 
           write(*,*) 'Shape functions not yet implemented. Exiting'
           call exit(1)
         endif
