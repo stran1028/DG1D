@@ -12,7 +12,7 @@ program conservative_overset
   real*8, allocatable :: elemInfo1(:,:),elemInfo2(:,:)
   integer :: nincomp1,nincomp2,nrk
   integer :: conswitch,noverlap
-  real*8 :: rk(4),dx(nmesh),ainf,cfl,foverlap
+  real*8 :: rk(4),dx(nmesh),ainf,cfl,foverlap,sweep(5,2)
   integer :: h
   !
   type(mesh), allocatable :: msh(:)
@@ -33,11 +33,11 @@ program conservative_overset
   call set_type('linear_advection',ainf)
   !call set_type('burgers')
   !
-  do conswitch = 1,1
-  do s = 1,2
-  do noverlap = 3,3
-  do order = 1,5
-  do h = 0,5
+  do conswitch = 0,0
+  do s = 1,1
+  do noverlap = 1,1
+  do order = 1,1
+     sweep = 0d0
 
     if ((conswitch.eq.0).and.(noverlap.gt.1)) cycle 
 
@@ -46,10 +46,10 @@ program conservative_overset
 
     if(conswitch.eq.0) then 
       consoverset = 0
-      write(*,*) '    BASELINE (ABUTTING METHOD):'
+      write(*,*) '  BASELINE (ABUTTING METHOD):'
     else
       consoverset = 1
-      write(*,*) '    CONSERVATIVE OVERSET:'
+      write(*,*) '  CONSERVATIVE OVERSET:'
     endif 
 
     if(noverlap.eq.1) then 
@@ -63,134 +63,128 @@ program conservative_overset
     
     if(s.eq.1) then 
       call setshp('lagrange')
-      write(*,*) '    LAGRANGE SHAPE FUNCTIONS'
+      write(*,*) '  LAGRANGE SHAPE FUNCTIONS'
     else
       call setshp('legendre')
-      write(*,*) '    LEGENDRE SHAPE FUNCTIONS'
+      write(*,*) '  LEGENDRE SHAPE FUNCTIONS'
     endif
 
-    if(h.eq.0) then  
-      dx = [0.5d0,0.25d0]
-    elseif(h.eq.1) then  
-      dx = [0.25d0,0.125d0]
-    elseif(h.eq.2) then 
-      dx = [0.125d0,0.0625d0]
-    elseif(h.eq.3) then 
-      dx = [0.0625d0,0.03125d0]
-    elseif(h.eq.4) then 
-      dx = [0.03125d0,0.015625d0]
-    elseif(h.eq.5) then 
-      dx = [0.015625d0,0.0078125d0]
-    endif
+    ! Do a mesh sweep
+    do h = 1,4
+      if(h.eq.1) then  
+        dx = [0.5d0,0.25d0]
+      elseif(h.eq.2) then  
+        dx = [0.25d0,0.125d0]
+      elseif(h.eq.3) then 
+        dx = [0.125d0,0.0625d0]
+      elseif(h.eq.4) then 
+        dx = [0.0625d0,0.03125d0]
+      elseif(h.eq.5) then 
+        dx = [0.03125d0,0.015625d0]
+      elseif(h.eq.6) then 
+        dx = [0.015625d0,0.0078125d0]
+      endif
 
-    ! Compute parameters
-    dt=cfl*minval(dx)/ainf
-    ntime =   nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
-    write(*,*) '    h, dx = ',h,dx
-    write(*,*) '    p = ',order
-    write(*,*) '    cfl = ',cfl
-    write(*,*) '    dt = ',dt
-    write(*,*) '    ntime = ',ntime
-    !
-    ! Initialize the mesh(es)
-    call init_mesh(msh(1),[-1d0,1d0],dx(1),1,order)
-    call init_mesh(msh(2),[-0.268d0,0.732d0],dx(2),0,order)
-    !
-    do n=1,nmesh
-     call initvar(msh(n))
-     msh(n)%sol=msh(n)%q
-    enddo
-    ! Store initial conditions (exact solution)
-    msh(1)%q0 = msh(1)%q 
-    msh(2)%q0 = msh(2)%q 
+      ! Compute parameters
+      dt=cfl*minval(dx)/ainf
+      ntime =   nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
+      write(*,*) ' '
+      write(*,*) '    h, dx = ',h,dx
+      write(*,*) '    p = ',order
+      write(*,*) '    cfl = ',cfl
+      write(*,*) '    dt = ',dt
+      write(*,*) '    ntime = ',ntime
+      !
+      ! Initialize the mesh(es)
+      call init_mesh(msh(1),[-1d0,1d0],dx(1),1,order)
+      call init_mesh(msh(2),[-0.268d0,0.732d0],dx(2),0,order)
+      !
+      do n=1,nmesh
+       call initvar(msh(n))
+       msh(n)%sol=msh(n)%q
+      enddo
+      ! Store initial conditions (exact solution)
+      msh(1)%q0 = msh(1)%q 
+      msh(2)%q0 = msh(2)%q 
 
-    !
-    ! Blank out coarser overlapping cells 
-    if(nmesh>1) then 
-      call connect(msh(1),msh(2))
-      call connect(msh(2),msh(1))
-      call fixOverlap(msh(2),msh(1))
-      call findIncompleteElements(msh(1),elemInfo1,nincomp1)
-      call findIncompleteElements(msh(2),elemInfo2,nincomp2)
-      call fixMassIncompleteElements(msh(1),msh(2),elemInfo2,nincomp2,&
-              consoverset,foverlap)
-      call fixMassIncompleteElements(msh(2),msh(1),elemInfo1,nincomp1,&
-              consoverset,foverlap)
-    end if
-    !
+      !
+      ! Blank out coarser overlapping cells 
+      if(nmesh>1) then 
+        call connect(msh(1),msh(2))
+        call connect(msh(2),msh(1))
+        call fixOverlap(msh(2),msh(1))
+        call findIncompleteElements(msh(1),elemInfo1,nincomp1)
+        call findIncompleteElements(msh(2),elemInfo2,nincomp2)
+        call fixMassIncompleteElements(msh(1),msh(2),elemInfo2,nincomp2,&
+                consoverset,foverlap)
+        call fixMassIncompleteElements(msh(2),msh(1),elemInfo1,nincomp1,&
+                consoverset,foverlap)
+      end if
+      !
 
-    do n=1,nmesh
-!     call output(100*order+10*h+n,msh(n))
-    enddo
-    call computeMoments(msh(1),mom0(:,1),err(1),nincomp1,elemInfo1)
-    call computeMoments(msh(2),mom0(:,2),err(2),nincomp2,elemInfo2)
-    !
-    ! Iterate in time
-    rk = [1d0/4d0, 8d0/15d0,5d0/12d0, 3d0/4d0];
-    do i=1,ntime
-   
-!     write(*,*) '--------------------------'
-!     write(*,*) 'TIMESTEP ',i
-!     write(*,*) '--------------------------'
-     ! RK step 1
-     call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap)
+      do n=1,nmesh
+!       call output(100*order+10*h+n,msh(n))
+      enddo
+      call computeMoments(msh(1),mom0(:,1),err(1),nincomp1,elemInfo1)
+      call computeMoments(msh(2),mom0(:,2),err(2),nincomp2,elemInfo2)
+      !
+      ! Iterate in time
+      rk = [1d0/4d0, 8d0/15d0,5d0/12d0, 3d0/4d0];
+      do i=1,ntime
+!       write(*,*) '--------------------------'
+!       write(*,*) 'TIMESTEP ',i
+!       write(*,*) '--------------------------'
+       ! RK step 1
+        call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap)
 
-     do j = 1,nmesh
-       ! Euler 1st order
-!       msh(j)%q=msh(j)%q+dt*msh(j)%dq
-!       msh(j)%sol=msh(j)%q
-      msh(j)%q=msh(j)%sol+rk(2)*dt*msh(j)%dq
-      msh(j)%sol=msh(j)%sol+rk(1)*dt*msh(j)%dq
-     enddo
+        do j = 1,nmesh
+          ! Euler 1st order
+!         msh(j)%q=msh(j)%q+dt*msh(j)%dq
+!         msh(j)%sol=msh(j)%q
+         msh(j)%q=msh(j)%sol+rk(2)*dt*msh(j)%dq
+         msh(j)%sol=msh(j)%sol+rk(1)*dt*msh(j)%dq
+        enddo
 
-     ! RK step 2
-     call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap)
-     do j = 1,nmesh
-      msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
-     enddo
+        ! RK step 2
+        call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap)
+        do j = 1,nmesh
+          msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
+        enddo
 
-    ! RK step 3
-     call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap)
-     do j = 1,nmesh
-      msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
-      msh(j)%q = msh(j)%sol
-     enddo
+        ! RK step 3
+        call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap)
+        do j = 1,nmesh
+          msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
+          msh(j)%q = msh(j)%sol
+        enddo
+       enddo ! timesteps
+       !
+       ! write final output
+       do n=1,nmesh
+!        call output(100*order+10*h+nmesh+n,msh(n))
+       enddo
+       call computeMoments(msh(1),mom1(:,1),err(1),nincomp1,elemInfo1)
+       call computeMoments(msh(2),mom1(:,2),err(2),nincomp2,elemInfo2)
 
-  !   check solution
-  !   do j = 1,nmesh
-  !   do m = 1,msh(j)%nelem
-  !   do k = 1,msh(j)%nshp
-  !      if(isnan(msh(j)%q(1,k,m))) then 
-  !       write(*,*) 'Found Nan at ',i,j,k,m
-  !       call exit(1)
-  !     endif
-  !   enddo
-  !   enddo
-  !   enddo
+!    write(*,*) '  Conservation error: ',sum(mom0(1,:)),sum(mom1(1,:)),sum(mom1(1,:))-sum(mom0(1,:))
+!    write(*,*) '  Final L2 error: ',sqrt(sum(err(:)))
+       sweep(h,1) = sqrt(sum(err(:)))
+       sweep(h,2) = sum(mom1(1,:))-sum(mom0(1,:))
+       !
+       ! Clear memory
+       do n = 1,nmesh
+         call clearMem(msh(n))
+       enddo
+       if (allocated(elemInfo1)) deallocate(elemInfo1)
+       if (allocated(elemInfo2)) deallocate(elemInfo2)
 
-    end do ! timesteps
-    !
-    ! write final output
-    write(*,*) ' '
-    write(*,*) '  FINAL OUTPUT: '
-    do n=1,nmesh
-!       call output(100*order+10*h+nmesh+n,msh(n))
-    enddo
-    call computeMoments(msh(1),mom1(:,1),err(1),nincomp1,elemInfo1)
-    call computeMoments(msh(2),mom1(:,2),err(2),nincomp2,elemInfo2)
+     enddo ! mesh sweep
 
-    write(*,*) '  Conservation error: ',sum(mom0(1,:)),sum(mom1(1,:)),sum(mom1(1,:))-sum(mom0(1,:))
-    write(*,*) '  Final L2 error: ',sqrt(sum(err(:)))
-    write(*,*) '----------------------------------'
-    !
-    ! Clear memory
-    do n = 1,nmesh
-      call clearMem(msh(n))
-    enddo
-    if (allocated(elemInfo1)) deallocate(elemInfo1)
-    if (allocated(elemInfo2)) deallocate(elemInfo2)
-
-  enddo ! mesh sweep
+     write(*,*) ' '
+     write(*,*) 'FINAL SWEEP OUTPUT: '
+     write(*,*) '  H SWEEP L2 ERROR = ',sweep(:,1)
+     write(*,*) '  H SWEEP CONS ERROR = ',sweep(:,2)
+     write(*,*) '----------------------------------'
   enddo ! p sweep
   enddo
   enddo

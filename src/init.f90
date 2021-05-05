@@ -68,7 +68,7 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
                       0.2190863625159820,0.2190863625159820,0.1494513491505806,0.1494513491505806,&
                       0.0666713443086881,0.0666713443086881]
   endif
-  write(*,*) '  order,nelem,nshp,ngauss = ',order,msh%nelem,msh%nshp,msh%ngauss
+  write(*,*) '    order,nelem,nshp,ngauss = ',order,msh%nelem,msh%nshp,msh%ngauss
 
   msh%nnodes=msh%nelem*msh%nshp
   msh%nvtx=msh%nelem*2
