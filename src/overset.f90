@@ -178,9 +178,11 @@ contains
                  xcut = [x1,x1]
                endif
                xrem = elemInfo(2:3,i)
-!               write(*,*) '  '
-!               write(*,*) 'LSide Overset'
-!               write(*,*) '   mshA eid, mshB j = ',eid,j
+               write(*,*) '  '
+               write(*,*) 'LSide Overset'
+               write(*,*) '   mshA eid, mshB j = ',eid,j
+               write(*,*) '   mshA x: ',x1,x2
+               write(*,*) '   mshB y: ',y1,y2
 
                ! add intermesh flux from mesh B interior to mesh A L node
                wtmp = 1d0
@@ -193,7 +195,7 @@ contains
                do k = 1,mshA%nshp
                  mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) + wtmp(k)*flx
                enddo
-!               write(*,*) '   L: qR,qL,flx = ',qR,qL,flx
+               write(*,*) '   L: qR,qL,flx = ',qR,qL,flx
 
                ! Handle mesh A R node flux
                wtmp = 1d0
@@ -209,10 +211,10 @@ contains
                enddo
 
                ! DEBUG
-!               write(*,*) '   R: qR,qL,flx = ',qR,qL,flx
-!               write(*,*) '   xcut = ',xcut 
-!               write(*,*) '   xrem = ',xrem 
-!               write(*,*) '   flx rhs = ',mshA%rhs(:,:,eid)
+               write(*,*) '   R: qR,qL,flx = ',qR,qL,flx
+               write(*,*) '   xcut = ',xcut 
+               write(*,*) '   xrem = ',xrem 
+               write(*,*) '   flx rhs = ',mshA%rhs(:,:,eid)
 
              elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem          
                ! Overlap is between y1 and x2
@@ -223,9 +225,9 @@ contains
                  xcut = [x2,x2]
                endif
                xrem = elemInfo(2:3,i)
-!               write(*,*) '  '
-!               write(*,*) 'RSide Overset'
-!               write(*,*) '   mshA eid, mshB j = ',eid,j
+               write(*,*) '  '
+               write(*,*) 'RSide Overset'
+               write(*,*) '   mshA eid, mshB j = ',eid,j
 
                ! Handle mesh A L node flux 
                wtmp = 1d0
@@ -240,7 +242,7 @@ contains
                  mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) + wtmp(k)*flx
                enddo
 
-!               write(*,*) '   L: qR,qL,flx = ',qR,qL,flx
+               write(*,*) '   L: qR,qL,flx = ',qR,qL,flx
 
                ! add intermesh flux from mesh B interior to mesh A R node
                wtmp = 1d0
@@ -255,10 +257,10 @@ contains
                enddo
 
                ! DEBUG
-!               write(*,*) '   R: qR,qL,flx = ',qR,qL,flx
-!               write(*,*) '   xcut = ',xcut 
-!               write(*,*) '   xrem = ',xrem 
-!               write(*,*) '   flx rhs = ',mshA%rhs(:,:,eid)
+               write(*,*) '   R: qR,qL,flx = ',qR,qL,flx
+               write(*,*) '   xcut = ',xcut 
+               write(*,*) '   xrem = ',xrem 
+               write(*,*) '   flx rhs = ',mshA%rhs(:,:,eid)
 
              endif
              fact = (xrem(2)-xrem(1))/(x2-x1)
@@ -279,12 +281,12 @@ contains
                  dvol(bb) = dvol(bb) + dwtmp(bb)*vol*(mshA%wgauss(aa)*fact)
                enddo ! nshp
              enddo ! ngauss
-!             write(*,*) '   dwtmp = ',dwtmp
-!             write(*,*) '   vol rhs = ',dvol
-!             write(*,*) '   full rhs = ',mshA%rhs(:,:,eid)
+             write(*,*) '   dwtmp = ',dwtmp
+             write(*,*) '   vol rhs = ',dvol
+             write(*,*) '   full rhs = ',mshA%rhs(:,:,eid)
 
-!             write(*,*) '    xrem: ',xrem
-!             write(*,*) '    rhs2 = ',mshA%rhs(1,:,eid)
+             write(*,*) '    xrem: ',xrem
+             write(*,*) '    rhs2 = ',mshA%rhs(1,:,eid)
              cycle iloop
           endif
        enddo eloop
@@ -350,6 +352,8 @@ contains
              endif
              lcut = xcut(2)-xcut(1)
              xc = 0.5*(xcut(1)+xcut(2))   ! center of section to be removed
+             write(*,*) ' '
+             write(*,*) 'M0 = ',mshA%mass(1,:,eid)
                
              ! Adjust mass matrix 
              if(consoverset.eq.1) then 
@@ -368,6 +372,8 @@ contains
                  enddo ! nshp
                enddo ! ngauss
              endif
+             write(*,*) 'M1 = ',mshA%mass(1,:,eid)
+             write(*,*) ' '
 
              cycle iloop
           endif

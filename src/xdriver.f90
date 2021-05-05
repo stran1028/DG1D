@@ -13,6 +13,7 @@ program conservative_overset
   integer :: nincomp1,nincomp2,nrk
   integer :: conswitch,noverlap
   real*8 :: rk(4),dx(nmesh),ainf,cfl,foverlap,sweep(5,2)
+  real*8 :: test1(6),test2(6)
   real*8 :: time(2)
   integer :: h
   !
@@ -35,9 +36,9 @@ program conservative_overset
   !call set_type('burgers')
   !
   do conswitch = 1,1
-  do s = 1,1
+  do s = 2,2
   do noverlap = 3,3
-  do order = 3,3
+  do order = 4,4
      sweep = 0d0
 
     if ((conswitch.eq.0).and.(noverlap.gt.1)) cycle 
@@ -71,7 +72,7 @@ program conservative_overset
     endif
 
     ! Do a mesh sweep
-    do h = 1,1
+    do h = 3,3
       ! start timer
       call cpu_time(time(1))
       if(h.eq.1) then  
@@ -126,7 +127,7 @@ program conservative_overset
       !
 
       do n=1,nmesh
-!       call output(100*order+10*h+n,msh(n))
+       call output(n,msh(n))
       enddo
       call computeMoments(msh(1),mom0(:,1),err(1),nincomp1,elemInfo1)
       call computeMoments(msh(2),mom0(:,2),err(2),nincomp2,elemInfo2)
@@ -134,37 +135,59 @@ program conservative_overset
       ! Iterate in time
       rk = [1d0/4d0, 8d0/15d0,5d0/12d0, 3d0/4d0];
       do i=1,ntime
-!       write(*,*) '--------------------------'
-!       write(*,*) 'TIMESTEP ',i
-!       write(*,*) '--------------------------'
+       write(*,*) '--------------------------'
+       write(*,*) 'TIMESTEP ',i
+       write(*,*) '--------------------------'
        ! RK step 1
         call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap)
 
         do j = 1,nmesh
           ! Euler 1st order
-!         msh(j)%q=msh(j)%q+dt*msh(j)%dq
-!         msh(j)%sol=msh(j)%q
-         msh(j)%q=msh(j)%sol+rk(2)*dt*msh(j)%dq
-         msh(j)%sol=msh(j)%sol+rk(1)*dt*msh(j)%dq
+         msh(j)%q=msh(j)%q+dt*msh(j)%dq
+         msh(j)%sol=msh(j)%q
+
+         ! debug
+         do n = 1,msh(j)%nelem
+         do m = 1,msh(j)%nshp
+           call shapefunction(msh(j)%nshp,msh(j)%x(msh(j)%e2n(m,n)),[msh(j)%xe(1,n),msh(j)%xe(2,n)],msh(j)%sol(1,:,n),test1,test2)
+
+           if(sum(test1).gt.1.1) then 
+         write(*,*) ' '
+         write(*,*) 'ERROR: '
+         write(*,*) '   mesh, elem, shp:',j, n, m
+         write(*,*) '   dx:', msh(j)%dx(n)
+         write(*,*) '   x:', msh(j)%x(msh(j)%e2n(1:msh(j)%nshp,n))
+         write(*,*) '   q:', msh(j)%q(1,:,n)
+         write(*,*) '   mass:', msh(j)%mass(1,:,n)
+         write(*,*) '   rhs:', msh(j)%rhs(1,:,n)
+         write(*,*) ' '
+           call exit(1)
+           endif
+         enddo
+         enddo
+
+
+!         msh(j)%q=msh(j)%sol+rk(2)*dt*msh(j)%dq
+!         msh(j)%sol=msh(j)%sol+rk(1)*dt*msh(j)%dq
         enddo
 
         ! RK step 2
-        call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap)
+!        call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap)
         do j = 1,nmesh
-          msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
+!          msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
         enddo
 
         ! RK step 3
-        call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap)
+!        call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap)
         do j = 1,nmesh
-          msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
-          msh(j)%q = msh(j)%sol
+!          msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
+!          msh(j)%q = msh(j)%sol
         enddo
        enddo ! timesteps
        !
        ! write final output
        do n=1,nmesh
-!        call output(100*order+10*h+nmesh+n,msh(n))
+        call output(nmesh+n,msh(n))
        enddo
        call computeMoments(msh(1),mom1(:,1),err(1),nincomp1,elemInfo1)
        call computeMoments(msh(2),mom1(:,2),err(2),nincomp2,elemInfo2)

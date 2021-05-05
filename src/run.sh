@@ -3,14 +3,13 @@ rm mesh.* log
 echo ' '
 echo 'Running...'
 
-./cons1d_baseline.exe >& log_baseline
-mkdir Baseline
-mv log* mesh* Baseline
-
-echo 'Done Baseline '
 
 ./cons1d_cons.exe >& log_consoverset
 mkdir ConsOverset
 mv log* mesh* ConsOverset
+echo 'Done Cons Overset'
 
-echo 'Done'
+./cons1d_baseline.exe >& log_baseline
+mkdir Baseline
+mv log* mesh* Baseline
+echo 'Done Baseline '
