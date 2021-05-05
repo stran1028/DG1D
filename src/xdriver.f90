@@ -13,6 +13,7 @@ program conservative_overset
   integer :: nincomp1,nincomp2,nrk
   integer :: conswitch,noverlap
   real*8 :: rk(4),dx(nmesh),ainf,cfl,foverlap,sweep(5,2)
+  real*8 :: time(2)
   integer :: h
   !
   type(mesh), allocatable :: msh(:)
@@ -33,10 +34,10 @@ program conservative_overset
   call set_type('linear_advection',ainf)
   !call set_type('burgers')
   !
-  do conswitch = 0,0
+  do conswitch = 1,1
   do s = 1,1
-  do noverlap = 1,1
-  do order = 1,1
+  do noverlap = 3,3
+  do order = 3,3
      sweep = 0d0
 
     if ((conswitch.eq.0).and.(noverlap.gt.1)) cycle 
@@ -70,7 +71,9 @@ program conservative_overset
     endif
 
     ! Do a mesh sweep
-    do h = 1,4
+    do h = 1,1
+      ! start timer
+      call cpu_time(time(1))
       if(h.eq.1) then  
         dx = [0.5d0,0.25d0]
       elseif(h.eq.2) then  
@@ -178,6 +181,11 @@ program conservative_overset
        if (allocated(elemInfo1)) deallocate(elemInfo1)
        if (allocated(elemInfo2)) deallocate(elemInfo2)
 
+       ! call timer
+       call cpu_time(time(2))
+       write(*,*) ' '
+       write(*,*) '    Run time: ',time(2)-time(1)
+       write(*,*) '    Run time/step: ',(time(2)-time(1))/ntime
      enddo ! mesh sweep
 
      write(*,*) ' '
