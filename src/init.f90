@@ -139,10 +139,6 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   enddo
   enddo
   !
-  !write(*,*) ' '
-  !write(*,*) 'init mass = ',msh%mass(1,1:msh%nshp,1)
-  !write(*,*) ' '
-
   msh%iblank=1
   msh%nres=dxmod
   !

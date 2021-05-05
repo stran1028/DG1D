@@ -22,10 +22,6 @@ subroutine output(iout,msh)
     if (maxval(msh%iblank(:,i)) == 1) then 
        do j = 1,msh%nshp       
          call shapefunction(msh%nshp,msh%x(msh%e2n(j,i)),[msh%xe(1,i),msh%xe(2,i)],msh%sol(1,:,i),qout,dqout)
-!         write(*,*) 'output debug' 
-!         write(*,*) '  x,xe = ',msh%x(msh%e2n(j,i)),msh%xe(1,i),msh%xe(2,i)
-!         write(*,*) '  sol =',msh%sol(1,:,i)
-!         write(*,*) '  qout =',qout
          q1 = sum(qout)
 
          error = msh%q0(1,j,i)-q1
