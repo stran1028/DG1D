@@ -76,6 +76,7 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   allocate(msh%e2n(msh%nshp,msh%nelem)) ! element to node number map? 
   allocate(msh%xe(2,msh%nelem))
   allocate(msh%dx(msh%nelem))
+  allocate(msh%dxcut(msh%nelem))
 
   do i=1,msh%nelem
      index1 = (i-1)*msh%nshp
@@ -96,6 +97,7 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
        enddo 
      endif 
   enddo
+  msh%dxcut = msh%dx
   !
   allocate(msh%shp(msh%ngauss,msh%nshp))
   allocate(msh%dshp(msh%ngauss,msh%nshp))  
@@ -138,6 +140,8 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   enddo
   enddo
   enddo
+!  write(*,*) ' '
+!  write(*,*) 'Mass 0 = ',msh%mass(1,:,1)
   !
   msh%iblank=1
   msh%nres=dxmod

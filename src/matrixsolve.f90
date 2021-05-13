@@ -1,13 +1,41 @@
-  subroutine matvec(A,x,n,b)
+  subroutine matmat(A,B,C,p,q,r)
     implicit none
-    integer, intent(in) :: n
-    real*8, dimension(n*n),intent(in) ::  A
+    integer, intent(in) :: p,q,r
+    real*8, dimension(p*q),intent(in) ::  A
+    real*8, dimension(q*r),intent(in) ::  B
+    real*8, dimension(p*r),intent(inout) :: C
+    real*8 :: tmp
+    integer i,j,k,aa,bb,cc
+
+    ! Matrix A is p x q (rows x col)
+    ! Matrix B is q x r 
+    do i = 1,p ! rows of C
+    do j = 1,r ! cols of C
+      cc = (i-1)*r+j
+      tmp = 0d0
+      do k = 1,q ! cols of A and rows of B
+        aa = (i-1)*q+k
+        bb = (k-1)*r+j
+        tmp = tmp + A(aa)*B(bb) 
+      enddo
+      C(cc) = tmp
+    enddo 
+    enddo 
+ 
+  end subroutine matmat
+
+  subroutine matvec(A,x,m,n,b)
+    implicit none
+    integer, intent(in) :: m,n
+    real*8, dimension(m*n),intent(in) ::  A
     real*8, dimension(n),intent(in) ::  x
-    real*8, dimension(n),intent(inout) ::  b
+    real*8, dimension(m),intent(inout) ::  b
     integer :: i,j,k
 
+    ! m = rows in A
+    ! n = cols in A, rows, in x
     b = 0d0
-    do i = 1,n
+    do i = 1,m
       do j = 1,n
         b(i) = b(i) + A((i-1)*n+j)*x(j)
       enddo ! j loop

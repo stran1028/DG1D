@@ -12,9 +12,9 @@ program conservative_overset
   real*8, allocatable :: elemInfo1(:,:),elemInfo2(:,:)
   integer :: nincomp1,nincomp2,nrk
   integer :: conswitch,noverlap
-  real*8 :: rk(4),dx(nmesh),ainf,cfl,foverlap,sweep(5,2)
+  real*8 :: rk(4),dx(nmesh),ainf,cfl,foverlap,sweep(6,2)
   real*8 :: test1(6),test2(6)
-  real*8 :: time(2)
+  real*8 :: time(2),m2start
   integer :: h
   !
   type(mesh), allocatable :: msh(:)
@@ -34,10 +34,10 @@ program conservative_overset
   call set_type('linear_advection',ainf)
   !call set_type('burgers')
   !
-  do conswitch = 0,1    ! cons overset loop 
-  do s = 1,2            ! shape function loop
-  do noverlap = 1,3     ! foverlap loop
-  do order = 1,5        ! p-order loop
+  do conswitch = 1,1    ! cons overset loop 
+  do s = 2,2            ! shape function loop
+  do noverlap = 3,3     ! foverlap loop
+  do order = 1,6        ! p-order loop
     sweep = 0d0
 
     if ((conswitch.eq.0).and.(noverlap.gt.1)) cycle 
@@ -71,7 +71,7 @@ program conservative_overset
     endif
 
     ! Do a mesh sweep
-    do h = 1,5
+    do h = 1,6
       ! start timer
       call cpu_time(time(1))
       if(h.eq.1) then  
@@ -88,11 +88,26 @@ program conservative_overset
         dx = [0.015625d0,0.0078125d0]
       endif
 
+      ! DEBUG, do an overlap sweep with a constant mesh size
+      dx = [0.5d0,0.25d0]
+      if(h.eq.1) then  
+        m2start = -0.5 + 0.25*.01
+      elseif(h.eq.2) then  
+        m2start = -0.5 + 0.25*.05
+      elseif(h.eq.3) then 
+        m2start = -0.5 + 0.25*.10
+      elseif(h.eq.4) then 
+        m2start = -0.5 + 0.25*.25
+      elseif(h.eq.5) then 
+        m2start = -0.5 + 0.25*.50
+      endif
+
       ! Compute parameters
       dt=cfl*minval(dx)/ainf
       ntime =   nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
       write(*,*) ' '
       write(*,*) '    h, dx = ',h,dx
+      write(*,*) '    m2start = ',m2start
       write(*,*) '    p = ',order
       write(*,*) '    cfl = ',cfl
       write(*,*) '    dt = ',dt
@@ -100,7 +115,8 @@ program conservative_overset
       !
       ! Initialize the mesh(es)
       call init_mesh(msh(1),[-1d0,1d0],dx(1),1,order)
-      call init_mesh(msh(2),[-0.268d0,0.732d0],dx(2),0,order)
+      call init_mesh(msh(2),[m2start,m2start+1d0],dx(2),0,order)
+!      call init_mesh(msh(2),[-0.268d0,0.732d0],dx(2),0,order)
       !
       do n=1,nmesh
        call initvar(msh(n))
@@ -126,7 +142,7 @@ program conservative_overset
       !
 
       do n=1,nmesh
-!       call output(n,msh(n))
+       call output(n,msh(n))
       enddo
       call computeMoments(msh(1),mom0(:,1),err(1),nincomp1,elemInfo1)
       call computeMoments(msh(2),mom0(:,2),err(2),nincomp2,elemInfo2)
@@ -165,7 +181,7 @@ program conservative_overset
        !
        ! write final output
        do n=1,nmesh
-!        call output(nmesh+n,msh(n))
+        call output(nmesh+n,msh(n))
        enddo
        call computeMoments(msh(1),mom1(:,1),err(1),nincomp1,elemInfo1)
        call computeMoments(msh(2),mom1(:,2),err(2),nincomp2,elemInfo2)

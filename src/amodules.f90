@@ -24,6 +24,7 @@ module code_types
      real*8, allocatable :: rhs(:,:,:) !< rhs vector (nfield, nshp, nelem)
      real*8, allocatable :: mass(:,:,:) !< Mass matrix (nfield,nshp*nshp,nelem)
      real*8, allocatable :: dx(:)      !< element size
+     real*8, allocatable :: dxcut(:)      !< element size after cutting
      real*8, allocatable :: wgauss(:)   !< weight of gauss pts (ngauss)
      real*8, allocatable :: xgauss(:)   !< location of gauss pts (ngauss)
      real*8, allocatable :: shp(:,:)     !< shape function values at qpts for parent element (ngauss,nshp)
