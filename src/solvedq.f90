@@ -17,7 +17,7 @@ subroutine solveDQ(msh,dt)
 
     ! use Tikhonov Regularization on cut elements for stability
     if(msh%dxcut(i)/msh%dx(i).lt.0.50) then ! only do for severely cut elements 
-      lambda = 0.0 ! Adding the least amount of bias as possible
+      lambda = 0d0    ! Adding the least amount of bias as possible
 
       ! assemble the regularized matrix [A; lambdaI] and vector [b; 0]
       breg(1:msh%nshp) = msh%rhs(1,:,i)
@@ -42,6 +42,16 @@ subroutine solveDQ(msh,dt)
       ! compute trans(A)*A and trans(A)*b
       call matmat(AregT,Areg,A,msh%nshp,2*msh%nshp,msh%nshp)
       call matvec(AregT,breg,msh%nshp,2*msh%nshp,b)
+
+      !write(*,*) ' '
+      !write(*,*) 'eid ',i,msh%dxcut(i)/msh%dx(i),msh%dxcut(i),msh%dx(i)
+      !write(*,*) 'x ',msh%x(msh%e2n(:,i))
+      !write(*,*) 'iblank ',msh%iblank(:,i)
+      !write(*,*) 'mass0 ',msh%mass(1,:,i)
+      !write(*,*) 'rhs0 ',msh%rhs(1,:,i)
+      !write(*,*) 'mass1 ',A
+      !write(*,*) 'rhs1 ',b
+      !write(*,*) ' '
 
     else ! otherwise, do nothing
       A = msh%mass(1,:,i)

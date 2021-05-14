@@ -20,7 +20,7 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   msh%iperiodic=iperiodic
   msh%nshp = order+1 
   !
-  msh%ngauss= msh%nshp+1
+  msh%ngauss= msh%nshp+3
   allocate(msh%xgauss(msh%ngauss))
   allocate(msh%wgauss(msh%ngauss))
   ! Parent element goes from -0.5 to 0.5
@@ -140,8 +140,9 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   enddo
   enddo
   enddo
-!  write(*,*) ' '
-!  write(*,*) 'Mass 0 = ',msh%mass(1,:,1)
+  !write(*,*) ' '
+  !write(*,*) 'Mass 0 = ',msh%mass(1,:,1)
+  !write(*,*) ' '
   !
   msh%iblank=1
   msh%nres=dxmod

@@ -12,7 +12,7 @@ program conservative_overset
   real*8, allocatable :: elemInfo1(:,:),elemInfo2(:,:)
   integer :: nincomp1,nincomp2,nrk
   integer :: conswitch,noverlap
-  real*8 :: rk(4),dx(nmesh),ainf,cfl,foverlap,sweep(6,2)
+  real*8 :: rk(4),dx(nmesh),ainf,cfl,foverlap,sweep(5,2)
   real*8 :: test1(6),test2(6)
   real*8 :: time(2),m2start
   integer :: h
@@ -34,10 +34,10 @@ program conservative_overset
   call set_type('linear_advection',ainf)
   !call set_type('burgers')
   !
-  do conswitch = 1,1    ! cons overset loop 
+  do conswitch = 0,1    ! cons overset loop 
   do s = 2,2            ! shape function loop
-  do noverlap = 3,3     ! foverlap loop
-  do order = 1,6        ! p-order loop
+  do noverlap = 1,3     ! foverlap loop
+  do order = 1,5        ! p-order loop
     sweep = 0d0
 
     if ((conswitch.eq.0).and.(noverlap.gt.1)) cycle 
@@ -71,40 +71,42 @@ program conservative_overset
     endif
 
     ! Do a mesh sweep
-    do h = 1,6
+    do h = 1,5
       ! start timer
       call cpu_time(time(1))
       if(h.eq.1) then  
-        dx = [0.5d0,0.25d0]
-      elseif(h.eq.2) then  
         dx = [0.25d0,0.125d0]
-      elseif(h.eq.3) then 
+      elseif(h.eq.2) then 
         dx = [0.125d0,0.0625d0]
-      elseif(h.eq.4) then 
+      elseif(h.eq.3) then 
         dx = [0.0625d0,0.03125d0]
-      elseif(h.eq.5) then 
+      elseif(h.eq.4) then 
         dx = [0.03125d0,0.015625d0]
-      elseif(h.eq.6) then 
+      elseif(h.eq.5) then 
         dx = [0.015625d0,0.0078125d0]
       endif
 
       ! DEBUG, do an overlap sweep with a constant mesh size
-      dx = [0.5d0,0.25d0]
-      if(h.eq.1) then  
-        m2start = -0.5 + 0.25*.01
-      elseif(h.eq.2) then  
-        m2start = -0.5 + 0.25*.05
-      elseif(h.eq.3) then 
-        m2start = -0.5 + 0.25*.10
-      elseif(h.eq.4) then 
-        m2start = -0.5 + 0.25*.25
-      elseif(h.eq.5) then 
-        m2start = -0.5 + 0.25*.50
-      endif
+!      dx = [0.25d0,0.125d0]
+!      if(h.eq.1) then  
+!        m2start = -0.5 - dx(2)*.25
+!      elseif(h.eq.2) then  
+!        m2start = -0.5 - dx(2)*.50
+!      elseif(h.eq.3) then 
+!        m2start = -0.5 - dx(2)*.75
+!      elseif(h.eq.4) then 
+!        m2start = -0.5 - dx(2)*.90
+!      elseif(h.eq.5) then 
+!        m2start = -0.5 - dx(2)*.95
+!      elseif(h.eq.6) then 
+!        m2start = -0.5 - dx(2)*.99
+!      endif
+
+      m2start = -0.5 - dx(2)*.95 !! stress test w/ 95% cut
 
       ! Compute parameters
       dt=cfl*minval(dx)/ainf
-      ntime =   nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
+      ntime =  nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
       write(*,*) ' '
       write(*,*) '    h, dx = ',h,dx
       write(*,*) '    m2start = ',m2start
@@ -150,9 +152,9 @@ program conservative_overset
       ! Iterate in time
       rk = [1d0/4d0, 8d0/15d0,5d0/12d0, 3d0/4d0];
       do i=1,ntime
-!       write(*,*) '--------------------------'
-!       write(*,*) 'TIMESTEP ',i
-!       write(*,*) '--------------------------'
+       !write(*,*) '--------------------------'
+       !write(*,*) 'TIMESTEP ',i
+       !write(*,*) '--------------------------'
        ! RK step 1
         call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap)
 
@@ -187,6 +189,8 @@ program conservative_overset
        call computeMoments(msh(2),mom1(:,2),err(2),nincomp2,elemInfo2)
        sweep(h,1) = sqrt(sum(err(:)))
        sweep(h,2) = sum(mom1(1,:))-sum(mom0(1,:))
+       write(*,*) '    Min Rem Frac M1: ',minval(msh(1)%dxcut)/dx(1)
+       write(*,*) '    Min Rem Frac M2: ',minval(msh(2)%dxcut)/dx(2)
        !
        ! Clear memory
        do n = 1,nmesh

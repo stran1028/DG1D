@@ -308,7 +308,7 @@ contains
                xcut = [x1,x1+xfac*(y2-x1)]
                if(consoverset.eq.1) then 
                  elemInfo(2:3,i) = [xcut(2),x2]
-                 mshA%dxcut = x2-xcut(2)
+                 mshA%dxcut(i) = x2-xcut(2)
                else
                  elemInfo(2:3,i) = [x1,x2]
                endif
@@ -318,7 +318,7 @@ contains
                xcut = [x2-xfac*(x2-y1),x2]
                if(consoverset.eq.1) then 
                  elemInfo(2:3,i) = [x1,xcut(1)]
-                 mshA%dxcut = x1-xcut(1)
+                 mshA%dxcut(i) = xcut(1)-x1
                else
                  elemInfo(2:3,i) = [x1,x2]
                endif
