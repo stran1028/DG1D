@@ -174,8 +174,17 @@ As the spatial order of accuracy is increased, it can be observed that the compl
 true for both Lagrange (nodal) and Legendre (modal) bases. This is exasperated when 
 the mass matrix is computed over only a portion of the element. The more of the element is removed,
 the worse the effect is. Because of this, it has been observed that the conservative overset
-method fails at high orders (p>5) and when the cut regions make up a large fraction of the
-full element (>30\%).   
+method fails at high orders (p>5) and when large portions of the elements have been cut away.
+
+To combat this, additional guass points (nshp+3) were added and Tikhonov regularization was added to 
+improve the condition of the mass matrix. The regularization essentially solves a similar
+L2 minimization problem with a higher condition number (more stable) rather than directly
+inverting the mass matrix. While this is a more stable approach, it comes at the cost of additional
+bias (and conservation error). The least amount of regularization is added ($\lambda = 0$) in order 
+to minimize the added conservation error and retain the benefits from the conservative overset. 
+Using the additional gauss points and regularization, the stability was improved to the point that
+p=5 simulations with 95\% of the element removed remained stable. However to go beyond p=5 required
+so much regularization that the conservation error increased beyond baseline values. 
 
 As an aside, note that by only integrating over a portion of the element, the orthogonality of the
 Legendre-based mass matrix is broken. When integrating over a partial element, the mass
@@ -229,18 +238,34 @@ the other hand, the conservative overset errors were consistently at or close to
 At higher orders with coarse grids, the conservation error using the conservative method was at
 its maximum but was still 5 or 6 orders of magnitude smaller than that of the baseline method. 
 
-The effect of the cut fraction was explored by running three different cut fractions: 1)
-where only the coarse grid was cut, 2) where half of the overlap region was cut from
-both grids, and 3) where only the fine grid was cut. There was a slight difference in the
-error although overall they gave similar results when the solutions converged. Using the
-3rd method of cutting only the fine grid showed poor stability since a larger 
-portion of the fringe element was cut, leading to a singular mass matrix. 
+The effect of the cut fraction was explored. It was found that increasing the cut fraction
+makes the cut mass matrix more ill conditioned. As discussed previously, this was addressed
+by adding in regularization in the $Ax=b$ matrix solve at the cost of a slight increase
+in error. This is shown in Figure \ref{fig:reg} which shows results for 3 cases
+where the fine mesh overlaps the coarse mesh by 95\% of the fine mesh length. These 3
+cases correspond to 1) the baseline case, 2) conservative overset where 48\% of the coarse element 
+was removed (with no regularization), and 3) conservative overset where 95\% of the fine mesh was removed (with
+regulariztion). Note that without regularization, the 95\% cut case diverges for p>3 (not shown) but with regularization it is able to 
+remain stable until p=5. This additional stability comes at the cost of an increase in the conservation
+error but it is still 4+ orders of magnitude lower than the baseline case. The L2 error is unchanged. 
+
+\begin{figure}
+\centering
+  \includegraphics[width=\textwidth]{../src/Convergence_Legendre_CFL0p01_CutLength.jpg}
+  \caption{Convergence plots for 1) the baseline case, 2) conservative overset where 48\% of the coarse element was removed, and 3) conservative overset where 95\% of the fine mesh was removed}
+  \label{fig:reg}
+\end{figure}
+
+Although this method is shown to improve stability, best practice would still be to reduce
+the cut length as much as possible by either removing half of the overlap from both
+fine and coarse elements or by removing it only from the coarse element. 
 
 \section{Conclusion}
 A conservative overset approach is described and applied to a 1D advection problem using
 discontinuous Galerkin finite elements. The conservative approach was shown to lead to lower
 L2 error as well as eliminating the conservation error. There are some stability issues with 
-the approach, although they can be avoided by keeping the spatial order of accuracy below $\approx 6$
-and limiting the amount of cutting done to each element. 
+the approach, although they can be avoided by keeping the spatial order of accuracy below $\approx 6$. 
+Regularization was added to improve stability in cases where there is high overlap between
+the elements but best practice is still to avoid this situation whenever possible. 
 
 \end{document}
