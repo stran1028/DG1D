@@ -84,7 +84,7 @@ upwinding approach is used.
 
 \begin{figure}[h]
 \centering
-  \includegraphics[width=\textwidth,trim={0 8cm 0  7cm},clip]{DGDiagram.pdf}
+  \includegraphics[width=\textwidth,trim={0 8cm 0  7cm},clip]{Figures/DGDiagram.pdf}
   \caption{Schematic describing a conventional DG method on a single mesh, with fluxes calculated at the discontinuous boundaries and volume integrals calculated over the element (shown in striped red)}
   \label{fig:dg}
 \end{figure}
@@ -109,7 +109,7 @@ separate but overlapping grids (ie overset meshes).
 
 \begin{figure}[t]
 \centering
-  \includegraphics[width=\textwidth,trim={0 4cm 0 4cm},clip]{DGBaseOverset.pdf}
+  \includegraphics[width=\textwidth,trim={0 4cm 0 4cm},clip]{Figures/DGBaseOverset.pdf}
   \caption{Schematic describing the baseline overset DG method with two meshes. Fluxes from neighboring meshes are interpolated at the element endpoints and volume integrals are calculated over the complete elements (shown in striped red)}
   \label{fig:base}
 \end{figure}
@@ -126,7 +126,7 @@ twice, once on each mesh.
 
 \begin{figure}[h]
 \centering
-  \includegraphics[width=\textwidth,trim={0 4cm 0 4cm},clip]{DGConsOverset.pdf}
+  \includegraphics[width=\textwidth,trim={0 4cm 0 4cm},clip]{Figures/DGConsOverset.pdf}
   \caption{Schematic describing the conservative overset DG method with two meshes. Portions of the overlap region are removed from each of the volume integrals and the fluxes are calculated at the point where the overlap is split.}
   \label{fig:cons}
 \end{figure}
@@ -225,7 +225,7 @@ bases and very little difference was observed.
 
 \begin{figure}
 \centering
-  \includegraphics[width=\textwidth]{Convergence_Legendre_CFL0p01.jpg}
+  \includegraphics[width=\textwidth]{Figures/Convergence_Legendre_CFL0p01.jpg}
   \caption{Convergence plots for L2 and conservation error using the baseline and conservative overset methods}
   \label{fig:error1}
 \end{figure}
@@ -251,7 +251,7 @@ error but it is still 4+ orders of magnitude lower than the baseline case. The L
 
 \begin{figure}
 \centering
-  \includegraphics[width=\textwidth]{../src/Convergence_Legendre_CFL0p01_CutLength.jpg}
+  \includegraphics[width=\textwidth]{Figures/Convergence_Legendre_CFL0p01_CutLength.jpg}
   \caption{Convergence plots for 1) the baseline case, 2) conservative overset where 48\% of the coarse element was removed, and 3) conservative overset where 95\% of the fine mesh was removed}
   \label{fig:reg}
 \end{figure}
