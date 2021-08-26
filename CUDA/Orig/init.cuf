@@ -2,7 +2,6 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   !
   use code_types
   use bases
-  use cudafor
   implicit none
   !
   type(mesh), intent(inout) :: msh
@@ -24,10 +23,6 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   msh%ngauss= msh%nshp+3
   allocate(msh%xgauss(msh%ngauss))
   allocate(msh%wgauss(msh%ngauss))
-  
-  allocate(msh_d%xgauss_d(msh%ngauss))
-  allocate(msh_d%wgauss_d(msh%ngauss))
-  
   ! Parent element goes from -0.5 to 0.5
   if(msh%ngauss.eq.1) then 
     msh%xgauss = 0d0
@@ -75,7 +70,6 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   endif
   write(*,*) '    order,nelem,nshp,ngauss = ',order,msh%nelem,msh%nshp,msh%ngauss
 
-  ! Host allocations
   msh%nnodes=msh%nelem*msh%nshp
   msh%nvtx=msh%nelem*2
   allocate(msh%x(msh%nnodes))
@@ -83,14 +77,7 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   allocate(msh%xe(2,msh%nelem))
   allocate(msh%dx(msh%nelem))
   allocate(msh%dxcut(msh%nelem))
-  
-  ! Device Allocations
-  allocate(msh_d%x_d(msh%nnodes))
-  allocate(msh_d%e2n_d(msh%nshp,msh%nelem)) ! element to node number map? 
-  allocate(msh_d%xe_d(2,msh%nelem))
-  allocate(msh_d%dx_d(msh%nelem))
-  allocate(msh_d%dxcut_d(msh%nelem))
-  
+
   do i=1,msh%nelem
      index1 = (i-1)*msh%nshp
      msh%xe(1,i)=xlim(1)+(i-1)*dxmod        ! left node coord
@@ -114,16 +101,14 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   !
   allocate(msh%shp(msh%ngauss,msh%nshp))
   allocate(msh%dshp(msh%ngauss,msh%nshp))  
-  allocate(msh_d%shp_d(msh%ngauss,msh%nshp))
-  allocate(msh_d%dshp_d(msh%ngauss,msh%nshp))    do i = 1,msh%ngauss
+  do i = 1,msh%ngauss
     ! 1D Parent element goes from -1/2 to 1/2
     msh%shp(i,:) = 1d0
     call shapefunction(msh%nshp,msh%xgauss(i),[-0.5d0,0.5d0],msh%shp(i,:),msh%shp(i,:),msh%dshp(i,:))
   enddo
   !
   msh%nfaces=msh%nelem
-  allocate(msh%face(2,msh%nelem))  
-  allocate(msh_d%face_d(2,msh%nelem))
+  allocate(msh%face(2,msh%nelem))
   !
   do i=1,msh%nelem
      msh%face(1,i)=max(i-1,1) ! gives you left element id
@@ -142,14 +127,6 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   allocate(msh%mass(msh%nfields,msh%nshp*msh%nshp,msh%nelem))
   allocate(msh%iblank(2,msh%nelem))
   allocate(msh%nres(msh%nvtx))
-  
-  allocate(msh_d%dq_d(msh%nfields,msh%nshp,msh%nelem))
-  allocate(msh_d%q_d(msh%nfields,msh%nshp,msh%nelem))
-  allocate(msh_d%sol_d(msh%nfields,msh%nshp,msh%nelem))
-  allocate(msh_d%rhs_d(msh%nfields,msh%nshp,msh%nelem))
-  allocate(msh_d%mass_d(msh%nfields,msh%nshp*msh%nshp,msh%nelem))
-  allocate(msh_d%iblank_d(2,msh%nelem))
-  allocate(msh_d%nres_d(msh%nvtx))
   !
   ! Storing NaNb for M = int(Na Nb |J| dx)
   msh%mass = 0.0

@@ -1,0 +1,71 @@
+subroutine computeMoments(msh,moments,error,nincomp,elemInfo)
+ !
+  use pde
+  use bases
+  use code_types
+ !
+ implicit none
+ integer,intent(in) :: nincomp
+ real*8,intent(in) :: elemInfo(3*nincomp)
+ type(mesh), intent(inout) :: msh
+ real*8, intent(inout) :: moments(2)
+ integer :: i,j,k,ndof,eid,index1,index2,index3
+ real*8 :: dxmod,xc,qvals(msh%nshp),dqvals(msh%nshp)
+ real*8 :: q0vals(msh%nshp),dq0vals(msh%nshp)
+ real*8 ::xlen,xg,exact(1),error(1),tmp
+ !
+ moments=0d0
+ xlen=0d0
+ ndof = 0
+ error = 0d0
+ ! Interior points
+ do i=1,msh%nelem
+! if (msh%iblank(1,i) .ne. 1 .and. &
+!       msh%iblank(2,i) .ne. 1) cycle
+   index1 = 2*(i-1)
+   if(minval(msh%iblank(index1+1:index1+2)).lt.0) cycle
+     index2 = msh%nshp*(i-1)
+     xc=(msh%xe(index1+2)+msh%xe(index1+1))*0.5
+     ndof = ndof + msh%nshp
+     tmp = 0d0
+     do j = 1,msh%ngauss
+       qvals = 0d0
+       call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],msh%q(index2+1),qvals,dqvals)
+       moments(1) = moments(1) + msh%wgauss(j)*sum(qvals)*msh%dx(i) 
+       moments(2) = moments(2) + msh%wgauss(j)*sum(qvals)*msh%dx(i)*xc
+ 
+       ! exact solution held in q0
+       q0vals = 0d0
+       call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],msh%q0(index2+1),q0vals,dq0vals)
+       error = error + msh%wgauss(j)*(sum(q0vals)-sum(qvals))**2d0*msh%dx(i)
+     enddo
+ enddo
+ ! Fringe elements
+ do i = 1,nincomp
+     ! Get the modified element size
+     index1 = (i-1)*3
+     eid = elemInfo(index1+1)
+     index2 = 2*(eid-1)
+     index3 = msh%nshp*(eid-1)+1
+     dxmod = elemInfo(index1+3)-elemInfo(index1+2)
+     xc = 0.5d0*(elemInfo(index1+3)+elemInfo(index1+2))
+
+     ! adjust gauss points to modified element
+     ndof = ndof + msh%nshp
+     tmp = 0d0
+     do j = 1,msh%ngauss
+       xg = msh%xgauss(j)*dxmod + xc
+       qvals = 0d0
+       call shapefunction(msh%nshp,xg,[msh%xe(index2+1),msh%xe(index2+2)],msh%q(index3),qvals,dqvals)
+       tmp = tmp+msh%wgauss(j)*sum(qvals)*msh%dx(i)
+       moments(1) = moments(1) + msh%wgauss(j)*sum(qvals)*dxmod
+       moments(2) = moments(2) + msh%wgauss(j)*sum(qvals)*dxmod*xc
+
+       ! exact solution held in q0
+       q0vals = 0d0
+       call shapefunction(msh%nshp,xg,[msh%xe(index2+1),msh%xe(index2+2)],msh%q0(index3),q0vals,dq0vals)
+       error = error + msh%wgauss(j)*(sum(q0vals)-sum(qvals))**2d0*dxmod
+     enddo
+ enddo
+ 
+end subroutine computeMoments

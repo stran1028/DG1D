@@ -1,0 +1,38 @@
+subroutine output(iout,msh)
+  use code_types
+  use pde
+  use bases
+  !
+  implicit none
+  integer, intent(in):: iout
+  type(mesh), intent(in) :: msh
+  !
+  integer :: i,j,index1,index2
+  real*8 :: qout(msh%nshp),dqout(msh%nshp),q1,q2,error(1)
+  character*22 :: fname
+  !
+  write(fname,'(A7,I0.3)') 'iblank.',iout
+  open(unit=11,file=fname,form='formatted')
+  write(fname,'(A5,I0.3)') 'mesh.',iout
+  open(unit=12,file=fname,form='formatted')
+
+  do i=1,msh%nelem
+    index1 = 2*(i-1)
+    write(11,*) i,msh%xe(index1+1),msh%xe(index1+2),msh%iblank(index1+1:index1+2)
+
+    if (maxval(msh%iblank(index1+1:index1+2)) == 1) then 
+       do j = 1,msh%nshp
+         index2 = (i-1)*msh%nshp
+         call shapefunction(msh%nshp,msh%x(msh%e2n(index2+j)),[msh%xe(index1+1),msh%xe(index1+2)],msh%sol(index2+1),qout,dqout)
+         q1 = sum(qout)
+
+         error = msh%q0(index2+j)-q1
+         write(12,*) msh%x(msh%e2n(index2+j)),q1, error
+      enddo
+
+    endif
+  enddo
+  close(11)
+  close(12)
+  !
+end subroutine output

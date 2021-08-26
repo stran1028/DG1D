@@ -1,0 +1,372 @@
+module overset
+  use code_types
+  use pde
+contains
+  !
+  subroutine connect(msh1,msh2)
+    implicit none
+    type(mesh), intent(inout) :: msh1
+    type(mesh), intent(in)    :: msh2
+    !
+    integer :: i,j,k,index1,index2
+    real*8  :: dx,res
+    !
+    ! brute force now 
+    !
+    do i = 1,msh1%nelem
+    do j = 1,msh2%nelem
+      index1 = (i-1)*2
+      index2 = (j-1)*2
+      dx = msh2%xe(index2+1)-msh2%xe(index2+1)
+
+      !If both vtx of mesh 1 in same element of mesh 2
+      if((msh2%xe(index2+2).ge.(msh1%xe(index1+2))).and. &
+         (msh2%xe(index2+1).le.(msh1%xe(index1+2))).and. &
+         (msh2%xe(index2+2).ge.(msh1%xe(index1+1))).and. &
+         (msh2%xe(index2+1).le.(msh1%xe(index1+1)))) then 
+         index1 = 2*(i-1)
+
+         ! If 1 node needs to be blanked, both do
+         res = maxval([msh1%nres(index1+1),msh1%nres(index1+2)])
+         if(res.gt.dx) msh1%iblank(index1+1:index1+2) = -1
+      else ! only 1 vtx overlapping in element of mesh 2
+         do k = 1,2
+           index2 = 2*(j-1)
+           if (msh2%xe(index2+2) .ge. msh1%xe(index1+k) .and. &
+                msh2%xe(index2+1) .le. msh1%xe(index1+k)) then
+
+              if(msh1%nres(index1+k).gt.dx) msh1%iblank(index1+k)=-1
+           endif
+         enddo
+      endif
+    enddo ! mesh 2 elem
+    enddo ! mesh 1 elem
+
+    ! Go back and fix any mistakes
+    do i = 2,msh1%nelem-1
+      ! If previous element was all blanked, 
+      ! L node of this elem needs to be blanked
+      ! leaving only a partial overlap
+      index1 = 2*(i-2)
+      index2 = 2*(i-1)
+      if(msh1%iblank(index1+2).eq.-1 ) then   
+        msh1%iblank(index2+1)=-1
+      endif
+
+      ! If next element was all blanked, 
+      ! R node of this elem needs to be blanked
+      ! leaving only a partial overlap
+      index1 = 2*(i)
+      index2 = 2*(i-1)
+      if(msh1%iblank(index1+1).eq.-1 ) then   
+        msh1%iblank(index2+2)=-1
+      endif
+    enddo
+  end subroutine connect
+  !
+  ! msh2 is considered to be the finer mesh here
+  !
+  subroutine fixOverlap(msh1,msh2)
+    implicit none
+    type(mesh), intent(inout) :: msh1
+    type(mesh), intent(in) :: msh2
+    !
+    integer :: i,j,ib1,ib2,ip,aa,bb,index1,index2
+    real*8 :: x1,y1,y2
+    real*8 :: TOL=1e-8
+    integer, parameter :: npass=2
+    !
+    do ip=1,npass
+!    m1loop: do i=1,msh1%nnodes
+    m1loop: do aa=1,msh1%nelem
+       do bb = 1,2
+         index1 = (aa-1)*2+bb
+         if (msh1%iblank(index1) .ne. 1) cycle m1loop  ! skip blanked nodes
+         x1=msh1%xe(index1)                             ! grab m1 node x coord
+         m2loop:do j=1,msh2%nelem
+            index2 = (j-1)*2
+            ib1=msh2%iblank(index2+1)        ! grab left m2 node
+            ib2=msh2%iblank(index2+2)        ! grab right m2 node
+            if (ib1*ib2 > 0 ) cycle m2loop ! skip if either nodes are iblanked 
+            y1=msh2%xe(index2+1)       ! grab left m2 x coord
+            y2=msh2%xe(index2+2)       ! grab right m2 x coord
+            if ((x1-y1)*(x1-y2) < TOL) then       ! blank m1 node if they're close to overlapping m2 nodes
+               msh1%iblank(index1)=-1
+               cycle m1loop               ! skip the rest of the m2 nodes
+            endif
+         end do m2loop
+      enddo
+    enddo m1loop
+    enddo
+  end subroutine fixOverlap       
+  !
+  subroutine findIncompleteElements(msh,elemInfo,nincomp)
+    !
+    implicit none
+    !
+    type(mesh), intent(in) :: msh
+    integer, intent(out) :: nincomp
+    real*8, allocatable, intent(out) :: elemInfo(:)
+    integer :: n1,n2,ib1,ib2,i,j,k,nrows,index1,index2
+    !
+    nincomp=0
+    !
+    ! find number of elems with only one blanked node
+    do i=1,msh%nelem
+       index1 = 2*(i-1)
+       ib1=msh%iblank(index1+1)
+       ib2=msh%iblank(index1+2)
+       if ( ib1*ib2 .le. 0) then
+          nincomp=nincomp+1
+       endif
+    enddo
+    !
+    ! store info on the incomplete elems
+    ! modified for DG, need both q endpts 
+    ! and rhs vector
+    allocate(elemInfo(3*nincomp))
+    k = 1
+    do i=1,msh%nelem
+       index1 = 2*(i-1)
+       ib1=msh%iblank(index1+1)
+       ib2=msh%iblank(index1+2)
+       if ( ib1*ib2 .le. 0) then
+          index1 = (k-1)*3+1
+          elemInfo(index1) = i
+          k=k+1
+       endif
+    enddo
+    !
+  end subroutine findIncompleteElements
+  !
+  subroutine fixFluxIncompleteElements(mshB,mshA,elemInfo,nincomp,consoverset,foverlap)
+    use bases
+
+    ! Subtract half of overlap section from mesh A (stored in elemInfo)
+    implicit none
+    type(mesh), intent(inout) :: mshA,mshB
+    integer, intent(in) :: nincomp,consoverset
+    real*8, intent(inout) :: elemInfo(3*nincomp),foverlap
+    !
+    integer :: i,j,k,e,nrows,aa,bb,cc,eid,neigh,index1,index2,index3
+    real*8 :: x1,x2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp)
+    real*8 :: xrem(2),xcut(2),xc,lcut,xg,vol,flx,qL,qR,fact,xfac
+    real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp),tmp
+    real*8 ::qtmp(mshA%nshp),dqtmp(mshA%nshp),dq,dvol(mshA%nshp),dflx(mshA%nshp)
+
+    !
+    ! elemInfo = incomplete elements on mesh A
+    ! msh = mesh info of mesh B
+    !
+     iloop: do i=1,nincomp       ! Loop through incomplete elem of mesh A
+       index1 = 3*(i-1)
+       eid = elemInfo(index1+1)
+       index1 = 2*(eid-1)
+       x1=mshA%xe(index1+1)
+       x2=mshA%xe(index1+2)
+       qA=mshA%q(index1+1:index2+mshA%nshp)
+       eloop: do j=1,mshB%nelem  ! Loop through all elem of mesh B
+          index2 = 2*(j-1)
+          y1=mshB%xe(index2+1)
+          y2=mshB%xe(index2+2)
+          if (x1 > y2 .or. x2 < y1) then ! skip if not overlapping
+             cycle eloop
+          else
+	     if (mshB%iblank(index2+1) .ne.1 .and. &
+                 mshB%iblank(index2+2) .ne.1) cycle eloop ! skip if element blanked
+             qB=mshB%q(index2+1:index2+mshB%nshp)
+
+             if(mshA%dx(eid).lt.mshB%dx(j)) then ! A is fine mesh
+               xfac = foverlap
+             else ! A is coarse mesh
+               xfac = 1d0-foverlap
+             endif
+
+             if ((x1-y1)*(x1-y2) .le. 0.0) then ! L node of mesh A is inside of mesh B elem
+               ! Full overlap is between x1 and y2
+               ! mshA will remove first section of overlap 
+               if(consoverset.eq.1) then 
+                 xcut = [x1,x1+xfac*(y2-x1)]
+               else
+                 xcut = [x1,x1]
+               endif
+               xrem = elemInfo((i-1)*3+2:(i-1)*3+3)
+
+               ! add intermesh flux from mesh B interior to mesh A L node
+               wtmp = 1d0
+               call shapefunction(mshA%nshp,xcut(2),[x1,x2],wtmp,wtmp,dwtmp)
+               call shapefunction(mshB%nshp,xcut(2),[y1,y2],qB,qtmp,dqtmp)
+               qL = sum(qtmp)
+               call shapefunction(mshA%nshp,xcut(2),[x1,x2],qA,qtmp,dqtmp)
+               qR = sum(qtmp)
+               call flux(qL,qR,flx)
+               do k = 1,mshA%nshp
+                 mshA%rhs(index1+k) = mshA%rhs(index1+k) + wtmp(k)*flx
+               enddo
+
+               ! Handle mesh A R node flux
+               wtmp = 1d0
+               call shapefunction(mshA%nshp,x2,[x1,x2],wtmp,wtmp,dwtmp)
+               neigh = mshA%face(index1+2)
+               call shapefunction(mshA%nshp,x2,[x1,x2],qA,qtmp,dqtmp)
+               qL = sum(qtmp)
+               call shapefunction(mshA%nshp,x2,mshA%xe(2*(neigh-1)+1),mshA%q(mshA%nshp*(neigh-1)+1),qtmp,dqtmp)
+               qR = sum(qtmp)
+               call flux(qL,qR,flx)
+               do k = 1,mshA%nshp
+                 mshA%rhs(index1+k) = mshA%rhs(index1+k) - wtmp(k)*flx
+               enddo
+
+             elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem          
+               ! Overlap is between y1 and x2
+               ! msh A will remove second half of overlap (from 0.5(y1+x2) to x2
+               if(consoverset.eq.1) then 
+                 xcut = [x2-xfac*(x2-y1),x2]
+               else
+                 xcut = [x2,x2]
+               endif
+               xrem = elemInfo(3*(i-1)+2:3*(i-1)+3)
+
+               ! Handle mesh A L node flux 
+               wtmp = 1d0
+               call shapefunction(mshA%nshp,x1,[x1,x2],wtmp,wtmp,dwtmp)
+               neigh = mshA%face(2*(eid-1)+1)
+               call shapefunction(mshA%nshp,x1,mshA%xe(2*(neigh-1)+1),mshA%q(mshA%nshp*(neigh-1)+1),qtmp,dqtmp)
+               qL = sum(qtmp)
+               call shapefunction(mshA%nshp,x1,[x1,x2],qA,qtmp,dqtmp)
+               qR = sum(qtmp)
+               call flux(qL,qR,flx)
+               do k = 1,mshA%nshp
+                 mshA%rhs(index1+k) = mshA%rhs(index1+k) + wtmp(k)*flx
+               enddo
+
+               ! add intermesh flux from mesh B interior to mesh A R node
+               wtmp = 1d0
+               call shapefunction(mshA%nshp,xcut(1),[x1,x2],wtmp,wtmp,dwtmp)
+               call shapefunction(mshB%nshp,xcut(1),[y1,y2],qB,qtmp,dqtmp)
+               qR = sum(qtmp)
+               call shapefunction(mshA%nshp,xcut(1),[x1,x2],qA,qtmp,dqtmp)
+               qL = sum(qtmp)
+               call flux(ql,qr,flx)
+               do k = 1,mshA%nshp
+                 mshA%rhs(index1+k) = mshA%rhs(index1+k) - wtmp(k)*flx
+               enddo
+
+             endif
+             fact = (xrem(2)-xrem(1))/(x2-x1)
+               
+             dvol = 0d0
+             ! Compute volume integral over partial element 
+             do aa = 1,mshA%ngauss
+               ! get shapefunction from msh A at quad pts of remaining element
+               xg = mshA%xgauss(aa)*(xrem(2)-xrem(1))+0.5d0*(xrem(2)+xrem(1))
+               wtmp = 1d0
+               call shapefunction(mshA%nshp,xg,[x1,x2],wtmp,wtmp,dwtmp)
+               call shapefunction(mshA%nshp,xg,[x1,x2],qA,qtmp,dqtmp)
+               call volint(sum(qtmp),vol)
+               do bb = 1,mshA%nshp
+                 ! Volume Integral
+                 mshA%rhs(index1+bb) = mshA%rhs(index1+bb) + dwtmp(bb)*vol*(mshA%wgauss(aa)*fact) ! scale gauss weights by length of remaining element parent
+
+                 dvol(bb) = dvol(bb) + dwtmp(bb)*vol*(mshA%wgauss(aa)*fact)
+               enddo ! nshp
+             enddo ! ngauss
+             cycle iloop
+          endif
+       enddo eloop
+    enddo iloop
+  end subroutine fixFluxIncompleteElements
+  !
+  subroutine fixMassIncompleteElements(mshB,mshA,elemInfo,nincomp,consoverset,foverlap)
+    use bases
+
+    ! Subtract half of overlap section from mesh A (stored in elemInfo)
+    implicit none
+    type(mesh), intent(inout) :: mshA,mshB
+    integer, intent(in) :: nincomp,consoverset
+    real*8, intent(inout) :: elemInfo(3*nincomp),foverlap
+    !
+    integer :: i,j,k,e,nrows,aa,bb,cc,eid,index1,index2
+    real*8 :: x1,x2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp)
+    real*8 :: xcut(2),xc,lcut,xg,xfac
+    real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp)
+    !
+    ! elemInfo = incomplete elements on mesh A
+    ! msh = mesh info of mesh B
+    !
+     iloop: do i=1,nincomp       ! Loop through incomplete elem of mesh A
+       eid = elemInfo(3*(i-1)+1)
+       index1 = 2*(eid-1)
+       x1=mshA%xe(index1+1) 
+       x2=mshA%xe(index1+2) 
+       qA=mshA%q(mshA%nshp*(eid-1)+1:mshA%nshp*eid) 
+       eloop: do j=1,mshB%nelem  ! Loop through all elem of mesh B
+          index2 = 2*(j-1)
+          y1=mshB%xe(index2+1)
+          y2=mshB%xe(index2+2)
+          if (x1 > y2 .or. x2 < y1) then ! skip if not overlapping
+             cycle eloop
+          else
+	     if (mshB%iblank(index2+1) .ne.1 .and. &
+                 mshB%iblank(index2+2) .ne.1) cycle eloop ! skip if incomplete mesh B elem
+             qB=mshB%q(mshB%nshp*(j-1)+1)
+
+             if(mshA%dx(eid).lt.mshB%dx(j)) then ! A is fine mesh
+               xfac = foverlap
+             else ! A is coarse mesh
+               xfac = 1d0-foverlap
+             endif
+
+             if ((x1-y1)*(x1-y2) .le. 0.0) then ! L node of mesh A is inside of mesh B elem
+               ! Overlap is between x1 and y2
+               ! mshA will remove first half of overlap (from x1 to 0.5*(x1+y2))
+               xcut = [x1,x1+xfac*(y2-x1)]
+               if(consoverset.eq.1) then 
+                 elemInfo(3*(i-1)+2:3*i) = [xcut(2),x2]
+                 mshA%dxcut(i) = x2-xcut(2)
+               else
+                 elemInfo(3*(i-1)+2:3*i) = [x1,x2]
+               endif
+             elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem          
+               ! Overlap is between y1 and x2
+               ! msh A will remove second half of overlap (from 0.5(y1+x2) to x2
+               xcut = [x2-xfac*(x2-y1),x2]
+               if(consoverset.eq.1) then 
+                 elemInfo(3*(i-1)+2:3*i) = [x1,xcut(1)]
+                 mshA%dxcut(i) = xcut(1)-x1
+               else
+                 elemInfo(3*(i-1)+2:3*i) = [x1,x2]
+               endif
+             endif
+             lcut = xcut(2)-xcut(1)
+             xc = 0.5*(xcut(1)+xcut(2))   ! center of section to be removed
+               
+             ! Adjust mass matrix 
+             if(consoverset.eq.1) then 
+               do aa = 1,mshA%ngauss
+                 ! get shapefunction from msh A at quad pts of cut section
+                 xg = mshA%xgauss(aa)*lcut+xc
+                 wtmp = 1d0
+                 call shapefunction(mshA%nshp,xg,[x1,x2],wtmp,wtmp,dwtmp)
+                 do bb = 1,mshA%nshp
+                 do cc = 1,mshA%nshp
+                      index2 = mshA%nshp*mshA%nshp*(eid-1)+(bb-1)*mshA%nshp+cc
+                      ! Fix mass matrix
+                      mshA%mass(index2) = mshA%mass(index2) - wtmp(bb)*wtmp(cc)*mshA%wgauss(aa)*lcut
+                 enddo ! nshp
+  
+                 enddo ! nshp
+               enddo ! ngauss
+!  write(*,*) ' '
+!  write(*,*) 'Mass 2: = ',eid,lcut/mshA%dx(eid),mshA%mass(1,:,eid)
+             endif
+
+             cycle iloop
+          endif
+       enddo eloop
+    enddo iloop
+  end subroutine fixMassIncompleteElements
+  !
+end module overset
+          
+  
