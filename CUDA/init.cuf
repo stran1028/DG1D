@@ -110,8 +110,6 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
     msh%shp(index1:index1+msh%nshp-1) = 1d0
     call shapefunction(msh%nshp,msh%xgauss(i),[-0.5d0,0.5d0],msh%shp(index1),msh%shp(index1),msh%dshp(index1))
   enddo
-  write(*,*) 'DEBUG SHP: ',msh%shp
-  write(*,*) 'DEBUG DSHP: ',msh%dshp
   !
   msh%nfaces=msh%nelem
   allocate(msh%face(2*msh%nelem))

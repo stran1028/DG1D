@@ -40,7 +40,7 @@ subroutine computeRHS(msh)
         qvals = 1d0
         ! XXX check these shapefunction calls are working
         call shapefunction(msh%nshp,-0.5d0,[-0.5d0,0.5d0],qvals,w,dqvals)
-        call shapefunction(msh%nshp,msh%xe((e1-1)*2+1),msh%xe(2*(e1-1)+1),msh%q(msh%nshp*(e1-1)+1),qvals,dqvals)
+        call shapefunction(msh%nshp,msh%xe((e1-1)*2+2),msh%xe(2*(e1-1)+1),msh%q(msh%nshp*(e1-1)+1),qvals,dqvals)
         ql = sum(qvals)
         call shapefunction(msh%nshp,msh%xe((i-1)*2+1), msh%xe(2*(i-1)+1), msh%q(index1+1),qvals,dqvals)
         qr = sum(qvals)
