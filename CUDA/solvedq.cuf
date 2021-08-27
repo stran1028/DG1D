@@ -28,7 +28,8 @@ subroutine solveDQ(msh,dt)
       AregT = 0d0
       do j = 1,2*msh%nshp
       do k = 1,msh%nshp
-         index1 = (j-1)*msh%nshp + k 
+         ! I think this is wrong indexing for index1 and 2. Double check XXX
+         index1 = (j-1)*msh%nshp*msh%nshp + k 
          index2 = (k-1)*2*msh%nshp + j ! Note j and k are switched b/c I want the transpose
          index3 = (i-1)*msh%nshp*msh%nshp + index1
          if(index1.le.msh%nshp*msh%nshp) then 
@@ -56,18 +57,19 @@ subroutine solveDQ(msh,dt)
       !write(*,*) ' '
 
       ! Solve Ax=b using LU decomp
-      index1 = (i-1)*msh%nshp
+      index1 = (i-1)*msh%nshp+1
       call lu(A,msh%nshp,L,U)
       call forwprop(L,b,msh%nshp,y)
-      call backprop(U,y,msh%nshp,msh%dq(index1+1:index1+msh%nshp))
+      call backprop(U,y,msh%nshp,msh%dq(index1))
 
     else ! otherwise, do nothing
-      index1 = (i-1)*msh%nshp + 1
+      index1 = (i-1)*msh%nshp*msh%nshp+1
+      index2 = (i-1)*msh%nshp+1
 
       ! Solve Ax=b using LU decomp
       call lu(msh%mass(index1),msh%nshp,L,U)
-      call forwprop(L,msh%rhs(index1),msh%nshp,y)
-      call backprop(U,y,msh%nshp,msh%dq(index1))
+      call forwprop(L,msh%rhs(index2),msh%nshp,y)
+      call backprop(U,y,msh%nshp,msh%dq(index2))
 
     endif
 
