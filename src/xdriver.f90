@@ -32,8 +32,8 @@ program conservative_overset
   !
 
   ! Set up the problem and bases types
-  call set_type('linear_advection',ainf)
-!  call set_type('burgers')
+!  call set_type('linear_advection',ainf)
+  call set_type('burgers')
   ilim = 1      ! flag to control slope limiting
   ieuler = 0
   do conswitch = 1,1    ! cons overset loop 
@@ -109,7 +109,7 @@ program conservative_overset
 
       ! Compute parameters
       dt=cfl*minval(dx)/ainf
-      ntime = nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
+      ntime = .5*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
       write(*,*) ' '
       write(*,*) '    h, dx = ',h,dx
       write(*,*) '    m2start = ',m2start
@@ -168,11 +168,11 @@ if(ieuler.eq.1) then
           msh(j)%sol=msh(j)%q
         enddo
 write(*,*) 'Limiting Grid 1...'
-          call genLimit(msh(1)%q,msh(1)%vlim,msh(1))
+          call genLimit(msh(1)%q,msh(1)%vlim,msh(1),msh(2))
           msh(1)%q = msh(1)%vlim
           msh(1)%sol=msh(1)%q
 write(*,*) 'Limiting Grid 2...'
-          call genLimit(msh(2)%q,msh(2)%vlim,msh(2))
+          call genLimit(msh(2)%q,msh(2)%vlim,msh(2),msh(1))
           msh(2)%q = msh(2)%vlim
           msh(2)%sol=msh(2)%q
 else
@@ -181,13 +181,13 @@ else
           msh(j)%sol=msh(j)%sol+rk(1)*dt*msh(j)%dq
         enddo
         if(ilim.eq.1) then
-          call genLimit(msh(1)%q,msh(1)%vlim,msh(1))
+          call genLimit(msh(1)%q,msh(1)%vlim,msh(1),msh(2))
           msh(1)%q = msh(1)%vlim
-          call genLimit(msh(1)%sol,msh(1)%vlim,msh(1))
+          call genLimit(msh(1)%sol,msh(1)%vlim,msh(1),msh(2))
           msh(1)%sol = msh(1)%vlim
-          call genLimit(msh(2)%q,msh(2)%vlim,msh(2))
+          call genLimit(msh(2)%q,msh(2)%vlim,msh(2),msh(1))
           msh(2)%q = msh(2)%vlim
-          call genLimit(msh(2)%sol,msh(2)%vlim,msh(2))
+          call genLimit(msh(2)%sol,msh(2)%vlim,msh(2),msh(1))
           msh(2)%sol = msh(2)%vlim
         endif
 
@@ -197,9 +197,9 @@ else
           msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
         enddo
         if(ilim.eq.1) then
-          call genLimit(msh(1)%q,msh(1)%vlim,msh(1))
+          call genLimit(msh(1)%q,msh(1)%vlim,msh(1),msh(2))
           msh(1)%q = msh(1)%vlim
-          call genLimit(msh(2)%q,msh(2)%vlim,msh(2))
+          call genLimit(msh(2)%q,msh(2)%vlim,msh(2),msh(1))
           msh(2)%q = msh(2)%vlim
         endif
 
@@ -209,9 +209,9 @@ else
           msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
         enddo
         if(ilim.eq.1) then
-          call genLimit(msh(1)%sol,msh(1)%vlim,msh(1))
+          call genLimit(msh(1)%sol,msh(1)%vlim,msh(1),msh(2))
           msh(1)%sol = msh(1)%vlim
-          call genLimit(msh(2)%sol,msh(2)%vlim,msh(2))
+          call genLimit(msh(2)%sol,msh(2)%vlim,msh(2),msh(1))
           msh(2)%sol = msh(2)%vlim
         endif
         msh(1)%q = msh(1)%sol
