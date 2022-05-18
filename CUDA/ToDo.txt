@@ -1,4 +1,0 @@
-To Do:
-
-1. Convert all multiD arrays to 1D arrays 
-2. 

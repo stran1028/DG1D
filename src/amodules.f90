@@ -17,6 +17,7 @@ module code_types
      real*8, allocatable :: dq(:,:,:)   !< q-variables (nfields,nshp,nelem)
      real*8, allocatable :: q0(:,:,:)   !< intermediate q-variables (nfields,nshp,nelem)
      real*8, allocatable :: q(:,:,:)   !< intermediate q-variables (nfields,nshp,nelem)
+     real*8, allocatable :: vlim(:,:,:)   !< limited q-variables (nfields,nshp,nelem)
      real*8, allocatable :: sol(:,:,:)   !< final q-variables (nfields,nshp,nelem)
      real*8, allocatable :: x(:)       !< end-node coords
      real*8, allocatable :: xe(:,:)    !< element end coords
