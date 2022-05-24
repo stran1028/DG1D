@@ -1,17 +1,17 @@
-subroutine timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap)
+subroutine timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap,isupg)
    use code_types
    use pde
    use overset
    implicit none
 
-   integer, intent(in) :: nmesh,consoverset
+   integer, intent(in) :: nmesh,consoverset,isupg
    integer :: n,nincomp1,nincomp2
    real*8, intent(inout) :: elemInfo1(nincomp1),elemInfo2(nincomp2)
    real*8, intent(inout) :: foverlap
    real*8, intent(in) :: dt
    type(mesh), intent(inout) :: msh(nmesh)
    do n=1,nmesh
-      call computeRHS(msh(n))
+      call computeRHS(msh(n),isupg,dt)
    enddo
 
    ! Adjust RHS based on overlaps

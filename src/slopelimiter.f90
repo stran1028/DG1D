@@ -49,7 +49,7 @@ contains
   end subroutine minmod
   !
   ! Pi^k Slope limiter from Cockburn (or Warburton pg 151) 
-  subroutine genLimit(vec,vecout,mshA,mshB)
+  subroutine genLimit2(vec,vecout,mshA,mshB)
     use code_types
     use pde
     use bases
@@ -130,7 +130,6 @@ contains
                 endif
               enddo eloop1 ! nelem 
             enddo ! ngauss
-write(*,*) '  Left Fringe'
           else ! rightmost fringe cell
             ! left side is easy
             u0m1 = 0.0d0
@@ -157,7 +156,6 @@ write(*,*) '  Left Fringe'
               enddo eloop2 ! nelem 
             enddo ! ngauss
 
-write(*,*) '  Right Fringe:'
 
           endif ! end of interior vs fringe cell case
 
@@ -169,7 +167,6 @@ write(*,*) '  Right Fringe:'
             u0   = u0   + SUM(qvals)*mshA%wgauss(j)
           enddo
 
-write(*,*) ' uL, u0, uR = ',uL,u0,uR
           ! approximate un-limited end points 
           call shapefunction(mshA%nshp,-0.5d0,[-0.5d0,0.5d0],vec(n,:,i),qvals,dqvals)
           uL = sum(qvals);
@@ -182,18 +179,12 @@ write(*,*) ' uL, u0, uR = ',uL,u0,uR
           call minmod2([uR-u0, u0-u0m1, u0p1 - u0],du,3,dx)
           uR2 = u0 + du 
   
-write(*,*) ' uL2, uR2 = ',uL2,uR2
           ! if necessary, use MUSCL to limit q here
           diff = abs(uL-uL2) + abs(uR-uR2)
           tol = 1e-4
           if(diff.lt.tol) then ! keep orig solution
             vecout(n,:,i) = vec(n,:,i)
           else ! limit
-write(*,*) ' ' 
-          write(*,*) '=========================== '
-          write(*,*) 'Elem ',i,' Slope Limit (x = ',mshA%xe(:,i)
-write(*,*) '  eL,eR = ',eL,eR
-            write(*,*) '  Entering MUSCL'
             ! get linear slope of the element
             du0 = 0.0d0
             do j = 1,mshA%ngauss
@@ -202,9 +193,7 @@ write(*,*) '  eL,eR = ',eL,eR
             enddo
   
             ! get the limited slope 
-            write(*,*) '  minmod args =',du0,(u0p1-u0)/dx,(u0-u0m1)/dx
             call minmod2([du0,(u0p1-u0)/dx,(u0-u0m1)/dx],du,3,dx)
-            write(*,*) '  du0, du = ',du0,du
 
 !          if(shptype.eq.'legendre') then 
               ! Now we have u (primary var) and need to reconstruct q (modal coeffs)
@@ -225,6 +214,112 @@ write(*,*) '  eL,eR = ',eL,eR
               call lu(mshA%mass(n,:,i),mshA%nshp,L,U)
               call forwprop(L,f,mshA%nshp,y)
               call backprop(U,y,mshA%nshp,vecout(n,:,i))
+!              else ! Lagrange
+             
+!              endif ! elem type
+          endif ! MUSCL limiter
+        endif ! blanking 
+      enddo ! loop over fields
+    enddo ! loop over elements
+  end subroutine genLimit2
+!
+
+  ! Pi^k Slope limiter from Cockburn (or Warburton pg 151) 
+  subroutine genLimit(vec,vecout,msh)
+    use code_types
+    use pde
+    use bases
+    implicit none
+    !
+    type(mesh), intent(in) :: msh
+    real*8,intent(in) :: vec(msh%nfields,msh%nshp,msh%nelem)
+    real*8,intent(inout) :: vecout(msh%nfields,msh%nshp,msh%nelem)
+    real*8 :: u0, u0m1, u0p1
+    real*8 :: xg, xb1, xb2
+    real*8 :: du0, du0m1, du0p1
+    real*8 :: uL, uR, uL2, uR2, du
+    real*8 :: qvals(msh%nshp), dqvals(msh%nshp)
+    real*8 :: dh,tmp,f(msh%nshp),diff,tol,dx
+    real*8,dimension(msh%nshp*msh%nshp) :: L,U
+    real*8,dimension(msh%nshp) :: y
+    integer :: n,i,j,k,eL,eR
+    do i = 1,msh%nelem
+      eL=msh%face(1,i) ! L neigh elem
+      eR=msh%face(2,i) ! R neigh elem
+      dx = msh%dx(i)
+      do n = 1,msh%nfields
+        if(maxval(msh%iblank(:,i)).eq.1) then ! ignore blanked cells
+            ! Convert elements to linear and 
+            ! get the cell averaged quantities u0 for elements i-1, i, and i+1
+            u0m1 = 0.0d0
+            u0p1 = 0.0d0
+!            if(shptype.eq.'legendre') then 
+              do j = 1,msh%ngauss
+                ! need to get from other mesh if on boundary
+                ! how does this work for overset?
+                qvals = 0d0
+                dqvals = 0d0
+                call shapefunction(2,msh%xgauss(j),[-0.5d0,0.5d0],vec(n,:,eL),qvals,dqvals)
+                u0m1 = u0m1 + SUM(qvals)*msh%wgauss(j) !jacobian and 1/area cancel out
+                call shapefunction(2,msh%xgauss(j),[-0.5d0,0.5d0],vec(n,:,eR),qvals,dqvals)
+                u0p1 = u0p1 + SUM(qvals)*msh%wgauss(j)
+              enddo
+
+          ! get the mean value of cell i
+          u0   = 0.0d0
+          do j = 1,msh%ngauss
+            qvals = 0d0
+            call shapefunction(2,msh%xgauss(j),[-0.5d0,0.5d0],vec(n,:,i),qvals,dqvals)
+            u0   = u0   + SUM(qvals)*msh%wgauss(j)
+          enddo
+
+          ! approximate un-limited end points 
+          call shapefunction(msh%nshp,-0.5d0,[-0.5d0,0.5d0],vec(n,:,i),qvals,dqvals)
+          uL = sum(qvals);
+          call shapefunction(msh%nshp, 0.5d0,[-0.5d0,0.5d0],vec(n,:,i),qvals,dqvals)
+          uR = sum(qvals); 
+
+          ! get limited end point values
+          call minmod2([u0-uL, u0-u0m1, u0p1 - u0],du,3,dx)
+          uL2 = u0 - du 
+          call minmod2([uR-u0, u0-u0m1, u0p1 - u0],du,3,dx)
+          uR2 = u0 + du 
+  
+          ! if necessary, use MUSCL to limit q here
+          diff = abs(uL-uL2) + abs(uR-uR2)
+          tol = 1e-4
+          if(diff.lt.tol) then ! keep orig solution
+            vecout(n,:,i) = vec(n,:,i)
+          else ! limit
+            ! get linear slope of the element
+            du0 = 0.0d0
+            do j = 1,msh%ngauss
+              call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],vec(n,:,i),qvals,dqvals)
+              du0 = du0 + SUM(dqvals)*msh%wgauss(j)/msh%dx(i)
+            enddo
+  
+            ! get the limited slope 
+            call minmod2([du0,(u0p1-u0)/dx,(u0-u0m1)/dx],du,3,dx)
+
+!          if(shptype.eq.'legendre') then 
+              ! Now we have u (primary var) and need to reconstruct q (modal coeffs)
+              ! int(Na Nb ub) = int(Na f(x,t))
+              ! ub = M^-1 int(Na f(x,t))
+              f = 0.0d0
+              do j = 1,msh%ngauss
+                dh=msh%xgauss(j)*dx
+                tmp = u0 + dh*du ! limit to linear function
+                qvals = 1d0
+                call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],qvals,qvals,dqvals)
+                do k = 1,msh%nshp
+                  f(k) = f(k) + msh%wgauss(j)*dx*tmp*qvals(k)
+                enddo
+              enddo
+
+              ! solve the elementary system for u
+              call lu(msh%mass(n,:,i),msh%nshp,L,U)
+              call forwprop(L,f,msh%nshp,y)
+              call backprop(U,y,msh%nshp,vecout(n,:,i))
 !              else ! Lagrange
              
 !              endif ! elem type

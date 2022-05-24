@@ -1,12 +1,14 @@
-subroutine computeRHS(msh)
+subroutine computeRHS(msh,isupg,dt)
   use code_types
   use pde
   use bases
   implicit none
   !
   type(mesh), intent(inout) :: msh
-  integer :: i,j,k,e1,e2
-  real*8 :: ql,qr,flx,qtmp,qvals(msh%nshp),dqvals(msh%nshp),vol,w(msh%nshp)
+  real*8, intent(in) :: dt
+  integer :: i,j,k,e1,e2,isupg
+  real*8 :: ql,qr,flx,qtmp,dqtmp,qvals(msh%nshp),dqvals(msh%nshp),vol,w(msh%nshp)
+  real*8 :: dudt,resid,tau
   integer, save :: iout=0
   !
   ! this is p0 implementation for
@@ -25,12 +27,33 @@ subroutine computeRHS(msh)
       do j = 1,msh%ngauss
         call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],msh%q(1,:,i),qvals,dqvals)
         qtmp = SUM(qvals)
+        dqtmp = SUM(dqvals)/msh%dxcut(i)
         do k = 1,msh%nshp
            call volint(qtmp,vol)
            vol = vol*msh%dshp(j,k)*msh%wgauss(j)
            msh%rhs(1,k,i) = msh%rhs(1,k,i) + vol 
-        enddo 
-      enddo
+
+           if(isupg.eq.1) then
+             ! get residual
+             call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],msh%qold(1,:,i),qvals,dqvals)
+             dudt = (qtmp-sum(qvals))/dt
+!             if(abs(dudt).gt.0d0) then
+               resid = dudt + qtmp*dqtmp ! du/dt + u du/dx
+               tau = sqrt(qtmp*qtmp/msh%dxcut(i)/msh%dxcut(i) + 4d0/dt/dt)
+               tau = qtmp/tau
+!               resid = dudt + a*dqtmp ! du/dt + u du/dx
+!               tau = sqrt(a*a/msh%dxcut(i)/msh%dxcut(i) + 4d0/dt/dt)
+!               tau = a/tau
+               if(i.eq.10) then 
+                       write(*,*) 'wgauss(j) = ',msh%wgauss(j)
+                       write(*,*) 'dudt,dudx = ',dudt,dqtmp
+                       write(*,*) 'resid,tau = ',resid,tau
+               endif
+               msh%rhs(1,k,i) = msh%rhs(1,k,i) - tau*resid*msh%dshp(j,k)*msh%wgauss(j)
+!             endif
+           endif
+        enddo ! shape
+      enddo ! gauss
       !
       ! Calculate the fluxes within current mesh
       if (e1.ne.e2) then

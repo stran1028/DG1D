@@ -122,6 +122,8 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   !
   allocate(msh%dq(msh%nfields,msh%nshp,msh%nelem))
   allocate(msh%q(msh%nfields,msh%nshp,msh%nelem))
+  allocate(msh%q0(msh%nfields,msh%nshp,msh%nelem))
+  allocate(msh%qold(msh%nfields,msh%nshp,msh%nelem))
   allocate(msh%vlim(msh%nfields,msh%nshp,msh%nelem))
   allocate(msh%sol(msh%nfields,msh%nshp,msh%nelem))
   allocate(msh%rhs(msh%nfields,msh%nshp,msh%nelem))
