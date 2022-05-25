@@ -216,19 +216,15 @@ contains
               enddo
               ! solve the elementary system for u
               ! use the uncut mass here
-              if(mshA%dx(i).eq.mshA%dxcut(i)) then
-                mass = mshA%mass(n,:,i)
-              else
-                mass = 0.0
-                do aa = 1,mshA%nshp
-                do bb = 1,mshA%nshp
-                  index1 = (aa-1)*mshA%nshp+bb
-                  do k = 1,mshA%ngauss
-                    mass(index1) = mass(index1) + mshA%shp(k,aa)*mshA%shp(k,bb)*mshA%wgauss(k)*mshA%dx(i)
-                  enddo
+              mass = 0.0
+              do aa = 1,mshA%nshp
+              do bb = 1,mshA%nshp
+                index1 = (aa-1)*mshA%nshp+bb
+                do k = 1,mshA%ngauss
+                  mass(index1) = mass(index1) + mshA%shp(k,aa)*mshA%shp(k,bb)*mshA%wgauss(k)*mshA%dx(i)
                 enddo
-                enddo
-              endif
+              enddo
+              enddo
 
               call lu(mass,mshA%nshp,L,U)
               call forwprop(L,f,mshA%nshp,y)
