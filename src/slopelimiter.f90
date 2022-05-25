@@ -64,13 +64,14 @@ contains
     real*8 :: uL, uR, uL2, uR2, du
     real*8 :: qvals(mshA%nshp), dqvals(mshA%nshp)
     real*8 :: dh,tmp,f(mshA%nshp),diff,tol,dx
-    real*8,dimension(mshA%nshp*mshA%nshp) :: L,U
+    real*8,dimension(mshA%nshp*mshA%nshp) :: mass,L,U
     real*8,dimension(mshA%nshp) :: y
-    integer :: n,i,j,k,eL,eR
+    integer :: n,i,j,k,eL,eR,idebug,aa,bb,index1
     do i = 1,mshA%nelem
       eL=mshA%face(1,i) ! L neigh elem
       eR=mshA%face(2,i) ! R neigh elem
       dx = mshA%dx(i)
+    idebug = 0
       do n = 1,mshA%nfields
         if(maxval(mshA%iblank(:,i)).eq.1) then ! ignore blanked cells
           if(minval(mshA%iblank(:,i)).eq.1) then ! interior element
@@ -130,12 +131,14 @@ contains
                 endif
               enddo eloop1 ! nelem 
             enddo ! ngauss
+
           else ! rightmost fringe cell
+                  if(mshA%xe(1,i).gt.0d0) idebug = 1 
             ! left side is easy
             u0m1 = 0.0d0
             do j = 1,mshA%ngauss
               qvals = 0d0
-              call shapefunction(2,mshA%xgauss(j),[-0.5d0,0.5d0],vec(n,:,eL),qvals,dqvals)
+              call shapefunction(mshA%nshp,mshA%xgauss(j),[-0.5d0,0.5d0],vec(n,:,eL),qvals,dqvals)
               u0m1 = u0m1 + SUM(qvals)*mshA%wgauss(j)
             enddo
 
@@ -149,7 +152,7 @@ contains
                 if((xb1-xg)*(xb2-xg).le.0) then ! found cell containing gauss pt
                   dh = (xg-0.5d0*(xb1+xb2))/mshB%dx(k)
                   qvals = 0d0
-                  call shapefunction(2,dh,[-0.5d0,0.5d0],mshB%q(n,:,k),qvals,dqvals)
+                  call shapefunction(mshB%nshp,dh,[-0.5d0,0.5d0],mshB%q(n,:,k),qvals,dqvals)
                   u0p1 = u0p1 + sum(qvals)*mshA%wgauss(j)
                   exit eloop2
                 endif
@@ -178,7 +181,7 @@ contains
           uL2 = u0 - du 
           call minmod2([uR-u0, u0-u0m1, u0p1 - u0],du,3,dx)
           uR2 = u0 + du 
-  
+
           ! if necessary, use MUSCL to limit q here
           diff = abs(uL-uL2) + abs(uR-uR2)
           tol = 1e-4
@@ -208,10 +211,26 @@ contains
                 do k = 1,mshA%nshp
                   f(k) = f(k) + mshA%wgauss(j)*dx*tmp*qvals(k)
                 enddo
-              enddo
 
+
+              enddo
               ! solve the elementary system for u
-              call lu(mshA%mass(n,:,i),mshA%nshp,L,U)
+              ! use the uncut mass here
+              if(mshA%dx(i).eq.mshA%dxcut(i)) then
+                mass = mshA%mass(n,:,i)
+              else
+                mass = 0.0
+                do aa = 1,mshA%nshp
+                do bb = 1,mshA%nshp
+                  index1 = (aa-1)*mshA%nshp+bb
+                  do k = 1,mshA%ngauss
+                    mass(index1) = mass(index1) + mshA%shp(k,aa)*mshA%shp(k,bb)*mshA%wgauss(k)*mshA%dx(i)
+                  enddo
+                enddo
+                enddo
+              endif
+
+              call lu(mass,mshA%nshp,L,U)
               call forwprop(L,f,mshA%nshp,y)
               call backprop(U,y,mshA%nshp,vecout(n,:,i))
 !              else ! Lagrange
@@ -306,6 +325,7 @@ contains
               ! int(Na Nb ub) = int(Na f(x,t))
               ! ub = M^-1 int(Na f(x,t))
               f = 0.0d0
+
               do j = 1,msh%ngauss
                 dh=msh%xgauss(j)*dx
                 tmp = u0 + dh*du ! limit to linear function

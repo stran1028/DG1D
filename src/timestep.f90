@@ -17,9 +17,9 @@ subroutine timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincom
    ! Adjust RHS based on overlaps
    if (nmesh > 1) then
       call fixfluxIncompleteElements(msh(1),msh(2),elemInfo2,nincomp2,&
-              consoverset,foverlap)
+              consoverset,foverlap,isupg,dt)
       call fixfluxIncompleteElements(msh(2),msh(1),elemInfo1,nincomp1,&
-              consoverset,foverlap)
+              consoverset,foverlap,isupg,dt)
    end if
 
    do n=1,nmesh

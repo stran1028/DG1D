@@ -48,7 +48,7 @@ contains
         xloc = (msh%xgauss(j)+0.5d0)*dx + msh%xe(1,i)
 !        tmp = exp(-0.01d0*xloc*xloc)
 !        if (abs(xloc) > 40d0) tmp=0d0
-        tmp = exp(-20d0*xloc*xloc)
+        tmp = 1d0*exp(-20d0*xloc*xloc)
         if (abs(xloc) > 0.8d0) tmp=0d0
         !tmp = exp(-.010d0*xloc*xloc)
         !if (abs(xloc) > 80d0) tmp=0d0

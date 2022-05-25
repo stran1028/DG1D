@@ -27,7 +27,7 @@ subroutine computeRHS(msh,isupg,dt)
       do j = 1,msh%ngauss
         call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],msh%q(1,:,i),qvals,dqvals)
         qtmp = SUM(qvals)
-        dqtmp = SUM(dqvals)/msh%dxcut(i)
+        dqtmp = SUM(dqvals)/msh%dx(i)
         do k = 1,msh%nshp
            call volint(qtmp,vol)
            vol = vol*msh%dshp(j,k)*msh%wgauss(j)
@@ -37,21 +37,22 @@ subroutine computeRHS(msh,isupg,dt)
              ! get residual
              call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],msh%qold(1,:,i),qvals,dqvals)
              dudt = (qtmp-sum(qvals))/dt
-!             if(abs(dudt).gt.0d0) then
+             if (index(pde_descriptor,'linear_advection') > 0 ) then
+               resid = dudt + a*dqtmp ! du/dt + a du/dx
+               tau = sqrt(a*a/msh%dxcut(i)/msh%dxcut(i) + 4d0/dt/dt)
+               tau = a/tau
+             else if (index(pde_descriptor,'burgers') > 0) then
                resid = dudt + qtmp*dqtmp ! du/dt + u du/dx
                tau = sqrt(qtmp*qtmp/msh%dxcut(i)/msh%dxcut(i) + 4d0/dt/dt)
                tau = qtmp/tau
-!               resid = dudt + a*dqtmp ! du/dt + u du/dx
-!               tau = sqrt(a*a/msh%dxcut(i)/msh%dxcut(i) + 4d0/dt/dt)
-!               tau = a/tau
-               if(i.eq.10) then 
-                       write(*,*) 'wgauss(j) = ',msh%wgauss(j)
-                       write(*,*) 'dudt,dudx = ',dudt,dqtmp
-                       write(*,*) 'resid,tau = ',resid,tau
-               endif
-               msh%rhs(1,k,i) = msh%rhs(1,k,i) - tau*resid*msh%dshp(j,k)*msh%wgauss(j)
+              endif
+!               if(i.eq.10) then 
+!                       write(*,*) 'wgauss(j) = ',msh%wgauss(j)
+!                       write(*,*) 'dudt,dudx = ',dudt,dqtmp
+!                       write(*,*) 'resid,tau = ',resid,tau
 !             endif
-           endif
+             msh%rhs(1,k,i) = msh%rhs(1,k,i) - tau*resid*msh%dshp(j,k)*msh%wgauss(j)
+           endif ! supg
         enddo ! shape
       enddo ! gauss
       !

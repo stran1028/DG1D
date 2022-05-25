@@ -129,21 +129,22 @@ contains
     !
   end subroutine findIncompleteElements
   !
-  subroutine fixFluxIncompleteElements(mshB,mshA,elemInfo,nincomp,consoverset,foverlap)
+  subroutine fixFluxIncompleteElements(mshB,mshA,elemInfo,nincomp,consoverset,foverlap,isupg,dt)
     use bases
 
     ! Subtract half of overlap section from mesh A (stored in elemInfo)
     implicit none
     type(mesh), intent(inout) :: mshA,mshB
-    integer, intent(in) :: nincomp,consoverset
+    integer, intent(in) :: nincomp,consoverset,isupg
     real*8, intent(inout) :: elemInfo(3,nincomp),foverlap
+    real*8, intent(in) :: dt
     !
     integer :: i,j,k,e,nrows,aa,bb,cc,eid,neigh
     real*8 :: x1,x2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp)
     real*8 :: xrem(2),xcut(2),xc,lcut,xg,vol,flx,qL,qR,fact,xfac
     real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp),tmp
     real*8 ::qtmp(mshA%nshp),dqtmp(mshA%nshp),dq,dvol(mshA%nshp),dflx(mshA%nshp)
-
+    real*8 :: qval,dqval,dudt,resid,tau
     !
     ! elemInfo = incomplete elements on mesh A
     ! msh = mesh info of mesh B
@@ -250,12 +251,40 @@ contains
                wtmp = 1d0
                call shapefunction(mshA%nshp,xg,[x1,x2],wtmp,wtmp,dwtmp)
                call shapefunction(mshA%nshp,xg,[x1,x2],qA,qtmp,dqtmp)
-               call volint(sum(qtmp),vol)
+               qval = sum(qtmp)
+               dqval = sum(dqtmp)/mshA%dx(eid)
+               call volint(qval,vol)
                do bb = 1,mshA%nshp
                  ! Volume Integral
                  mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) + dwtmp(bb)*vol*(mshA%wgauss(aa)*fact) ! scale gauss weights by length of remaining element parent
 
                  dvol(bb) = dvol(bb) + dwtmp(bb)*vol*(mshA%wgauss(aa)*fact)
+
+                 ! SUPG Terms
+                 if(isupg.eq.1) then
+                   ! get residual
+                   call shapefunction(mshA%nshp,xg,[x1,x2],mshA%qold(1,:,eid),qtmp,dqtmp)
+                   dudt = (qval-sum(qtmp))/dt
+                   if (index(pde_descriptor,'linear_advection') > 0 ) then
+                     resid = dudt + a*dqval ! du/dt + a du/dx
+                     tau = sqrt(a*a/mshA%dxcut(eid)/mshA%dxcut(eid) + 4d0/dt/dt)
+                     tau = a/tau
+                   else if (index(pde_descriptor,'burgers') > 0) then
+                     resid = dudt + qval*dqval ! du/dt + u du/dx
+                     tau = sqrt(qval*qval/mshA%dxcut(eid)/mshA%dxcut(eid) + 4d0/dt/dt)
+                     tau = qval/tau
+                   endif
+                   if(qval.gt.1.5d0) then 
+                   write(*,*) ' '
+                   write(*,*) ' eid = ',eid
+                   write(*,*) '   u,uold,dt = ',qval, sum(qtmp),dt
+                   write(*,*) '   dudt, dqval =',dudt, dqval
+                   write(*,*) '   resid = ',resid
+                   write(*,*) '   tau = ',tau
+                   write(*,*) '   supg = ',tau*resid
+                   endif
+                   mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) - dwtmp(bb)*tau*resid*(mshA%wgauss(aa)*fact)
+                 endif ! supg
                enddo ! nshp
              enddo ! ngauss
              cycle iloop
