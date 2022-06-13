@@ -13,7 +13,7 @@ program conservative_overset
   real*8, allocatable :: elemInfo1(:,:),elemInfo2(:,:)
   integer :: nincomp1,nincomp2,nrk
   integer :: conswitch,noverlap
-  real*8 :: rk(4),dx(nmesh),ainf,cfl,foverlap,sweep(5,2)
+  real*8 :: rk(4),dx(nmesh),ainf,cfl,foverlap,sweep(5,3)
   real*8 :: test1(6),test2(6)
   real*8 :: time(2),m2start
   integer :: h
@@ -37,10 +37,10 @@ program conservative_overset
   ilim = 1      ! flag to control slope limiting
   isupg = 0  ! supg flag
   ieuler = 0
-  do conswitch = 1,1    ! cons overset loop 
+  do conswitch = 0,1    ! cons overset loop 
   do s = 2,2            ! shape function loop
   do noverlap = 1,1     ! foverlap loop
-  do order = 4,4      ! p-order loop
+  do order = 2,2      ! p-order loop
     sweep = 0d0
 
     if ((conswitch.eq.0).and.(noverlap.gt.1)) cycle 
@@ -74,7 +74,7 @@ program conservative_overset
     endif
 
     ! Do a mesh sweep
-    do h = 3,3
+    do h = 1,1
       ! start timer
       call cpu_time(time(1))
       if(h.eq.1) then  
@@ -111,7 +111,7 @@ program conservative_overset
 
       ! Compute parameters
       dt=cfl*minval(dx)/ainf
-      ntime = 0.5*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
+      ntime = 1.25*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
       write(*,*) ' '
       write(*,*) '    h, dx = ',h,dx
       write(*,*) '    m2start = ',m2start
@@ -123,7 +123,7 @@ program conservative_overset
       !
       ! Initialize the mesh(es)
       call init_mesh(msh(1),[-1d0,1d0],dx(1),1,order)
-      call init_mesh(msh(2),[m2start,m2start+1d0],dx(2),0,order)
+      call init_mesh(msh(2),[m2start,m2start+0.75d0],dx(2),0,order)
 !      call init_mesh(msh(2),[-0.268d0,0.732d0],dx(2),0,order)
       !
       do n=1,nmesh
@@ -155,7 +155,10 @@ program conservative_overset
        call output(n,msh(n))
       enddo
       call computeMoments(msh(1),mom0(:,1),err(1),nincomp1,elemInfo1)
-!      call computeMoments(msh(2),mom0(:,2),err(2),nincomp2,elemInfo2)
+      call computeMoments(msh(2),mom0(:,2),err(2),nincomp2,elemInfo2)
+
+      write(*,*) 'Initial Area Under Curve: ', sum(mom0(1,:))
+
       !
       ! Iterate in time
       rk = [1d0/4d0, 8d0/15d0,5d0/12d0, 3d0/4d0];
@@ -261,7 +264,8 @@ endif
       call computeMoments(msh(1),mom1(:,1),err(1),nincomp1,elemInfo1)
       call computeMoments(msh(2),mom1(:,2),err(2),nincomp2,elemInfo2)
       sweep(h,1) = sqrt(sum(err(:)))
-      sweep(h,2) = sum(mom1(1,:))-sum(mom0(1,:))
+      sweep(h,2) = sum(mom1(1,:))
+      sweep(h,3) = sum(mom1(1,:))-sum(mom0(1,:))
       write(*,*) '    Min Rem Frac M1: ',minval(msh(1)%dxcut)/dx(1)
       write(*,*) '    Min Rem Frac M2: ',minval(msh(2)%dxcut)/dx(2)
       !
@@ -282,7 +286,8 @@ endif
      write(*,*) ' '
      write(*,*) 'FINAL SWEEP OUTPUT: '
      write(*,*) '  H SWEEP L2 ERROR = ',sweep(:,1)
-     write(*,*) '  H SWEEP CONS ERROR = ',sweep(:,2)
+     write(*,*) '  H SWEEP CONS AREA = ',sweep(:,2)
+     write(*,*) '  H SWEEP CONS ERROR = ',sweep(:,3)
      write(*,*) '----------------------------------'
   enddo ! p sweep
   enddo
