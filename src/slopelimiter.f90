@@ -11,7 +11,7 @@ contains
     real*8 :: fact ! tuning factor, low is higher dissipation
     real*8 :: a(m)
     
-    fact = 100d0*dx*dx
+    fact = 20d0*dx*dx
 !    a(1) = v(1)
 !    do i = 2,m
 !      a(i) = v(i) + fact*dx*dx*(abs(v(i))/v(i))
