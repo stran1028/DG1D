@@ -7,7 +7,7 @@ program conservative_overset
   implicit none
   !
   integer, parameter :: nmesh=2
-  integer :: i,s,ntime,n,j,k,m,order,consoverset,ilim,ieuler, isupg
+  integer :: i,s,ntime,n,j,k,m,order,consoverset,ilim,ieuler, isupg,ivisc
   real*8 :: dt,mom1(2,nmesh),mom0(2,nmesh)
   real*8 :: err(nmesh)
   real*8, allocatable :: elemInfo1(:,:),elemInfo2(:,:)
@@ -37,6 +37,7 @@ program conservative_overset
   ilim = 1      ! flag to control slope limiting
   isupg = 0  ! supg flag
   ieuler = 0
+  ivisc = 0 ! viscous fluxes
   do conswitch = 0,1    ! cons overset loop 
   do s = 2,2            ! shape function loop
   do noverlap = 1,1     ! foverlap loop
