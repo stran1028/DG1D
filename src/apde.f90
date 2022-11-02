@@ -1,12 +1,12 @@
 module pde
   character*20 :: pde_descriptor
   integer, save :: pde_set=0
-  real*8 :: a
+  real*8 :: a,kappa
 contains
-  subroutine set_type(pdetype,wavespeed)
+  subroutine set_type(pdetype,wavespeed,diff)
     implicit none
     character*(*) :: pdetype
-    real*8, optional, intent(in) :: wavespeed
+    real*8, optional, intent(in) :: wavespeed,diff
     write(pde_descriptor,'(A20)') pdetype
     pde_descriptor=trim(adjustl(pde_descriptor))
     if (pde_descriptor .ne. 'linear_advection' .and. & 
@@ -19,6 +19,11 @@ contains
        a=wavespeed
     else
        a=1d0
+    endif
+    if(present(diff)) then 
+       kappa=diff
+    else
+       kappa=1d0
     endif
   end subroutine set_type
   !
@@ -96,25 +101,53 @@ contains
     real*8, intent(in) :: ql
     real*8, intent(in) :: qr
     real*8, intent(out) :: flx
+    real*8 :: C12
     !
 
-    ! Lax Friedrichs Flux
     if (index(pde_descriptor,'linear_advection') > 0 ) then
-     flx=0.5d0*(a*(ql+qr)-abs(a)*(qr-ql))
+      ! Lax Friedrichs Flux
+      !flx=0.5d0*(a*(ql+qr)-abs(a)*(qr-ql))
+
+      ! LDG/CDG formulation
+      C12 = 0.5 ! 0.5 dot n-
+      flx=a*(0.5d0*(ql+qr) + C12*(ql-qr) )
     else if (index(pde_descriptor,'burgers') > 0) then
-     flx=0.5d0*(0.5d0*(ql*ql+qr*qr)-0.5d0*(ql+qr)*(qr-ql))
+      flx=0.5d0*(0.5d0*(ql*ql+qr*qr)-0.5d0*(ql+qr)*(qr-ql))
     endif
   end subroutine flux
-  !
-  subroutine volint(qtmp,vol)
+  ! 
+  subroutine fluxd(ql,dql,qr,dqr,dflx)
     !
     implicit none
     !
-    real*8, intent(in) :: qtmp
+    real*8, intent(in) :: ql,dql
+    real*8, intent(in) :: qr,dqr
+    real*8, intent(out) :: dflx
+    real*8 :: C11,C12
+    !
+    ! Compact DG formulation for gradients (Persson et al)
+    if (index(pde_descriptor,'linear_advection') > 0 ) then
+      ! LDG/CDG formulation
+      C11 = 0.0d0
+      C12 = 0.5d0 ! 0.5 dot n-
+      dflx = kappa*(0.5d0*(dql+dqr) + C11*(ql-qr) - C12*(dql-dqr))
+    else if (index(pde_descriptor,'burgers') > 0) then
+     dflx=0 !XXX
+    endif
+  
+  end subroutine fluxd
+  !
+  subroutine volint(qtmp,dqtmp,vol,ivisc)
+    !
+    implicit none
+    !
+    integer, intent(in) :: ivisc
+    real*8, intent(in) :: qtmp,dqtmp
     real*8, intent(out) :: vol
     !
     if (index(pde_descriptor,'linear_advection') > 0 ) then
      vol=a*qtmp
+     if(ivisc.eq.1) vol = vol - kappa*dqtmp
     else if (index(pde_descriptor,'burgers') > 0) then
      vol=0.5*qtmp*qtmp
     endif

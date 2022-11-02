@@ -1,4 +1,4 @@
-subroutine computeRHS(msh,isupg,dt)
+subroutine computeRHS(msh,isupg,dt,ivisc)
   use code_types
   use pde
   use bases
@@ -6,8 +6,8 @@ subroutine computeRHS(msh,isupg,dt)
   !
   type(mesh), intent(inout) :: msh
   real*8, intent(in) :: dt
-  integer :: i,j,k,e1,e2,isupg
-  real*8 :: ql,qr,flx,qtmp,dqtmp,qvals(msh%nshp),dqvals(msh%nshp),vol,w(msh%nshp)
+  integer :: i,j,k,e1,e2,isupg,ivisc
+  real*8 :: ql,qr,flx,dql,dqr,dflx,qtmp,dqtmp,qvals(msh%nshp),dqvals(msh%nshp),vol,w(msh%nshp)
   real*8 :: dudt,resid,tau
   integer, save :: iout=0
   !
@@ -29,11 +29,11 @@ subroutine computeRHS(msh,isupg,dt)
         qtmp = SUM(qvals)
         dqtmp = SUM(dqvals)/msh%dx(i)
         do k = 1,msh%nshp
-           call volint(qtmp,vol)
+           call volint(qtmp,dqtmp,vol,ivisc)
            vol = vol*msh%dshp(j,k)*msh%wgauss(j)
            msh%rhs(1,k,i) = msh%rhs(1,k,i) + vol 
 
-           if(isupg.eq.1) then
+           if((isupg.eq.1).and.(ivisc.eq.0)) then
              ! get residual
              call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],msh%qold(1,:,i),qvals,dqvals)
              dudt = (qtmp-sum(qvals))/dt
@@ -52,7 +52,11 @@ subroutine computeRHS(msh,isupg,dt)
 !                       write(*,*) 'resid,tau = ',resid,tau
 !             endif
              msh%rhs(1,k,i) = msh%rhs(1,k,i) - tau*resid*msh%dshp(j,k)*msh%wgauss(j)
+           elseif((isupg.eq.1).and.(ivisc.eq.0)) then
+             write(*,*) 'ERROR: SUPG NOT SUPPORTED WITH VISC YET. EXITING'
+             call exit(1)
            endif ! supg
+
         enddo ! shape
       enddo ! gauss
       !
@@ -63,11 +67,18 @@ subroutine computeRHS(msh,isupg,dt)
         call shapefunction(msh%nshp,-0.5d0,[-0.5d0,0.5d0],qvals,w,dqvals)
         call shapefunction(msh%nshp,msh%xe(2,e1),msh%xe(:,e1),msh%q(1,:,e1),qvals,dqvals)
         ql = sum(qvals)
+        dql = sum(dqvals)
         call shapefunction(msh%nshp,msh%xe(1,i),msh%xe(:,i),msh%q(1,:,i),qvals,dqvals)
         qr = sum(qvals)
+        dqr = sum(dqvals)
         call flux(ql,qr,flx)
+        if(ivisc.eq.1) then
+          call fluxd(ql,dql,qr,dqr,dflx)
+        else
+          dflx = 0d0
+        endif
         do j = 1,msh%nshp
-            msh%rhs(:,j,i) = msh%rhs(:,j,i) + w(j)*flx
+            msh%rhs(:,j,i) = msh%rhs(:,j,i) + w(j)*(flx-dflx)
         enddo
         
         ! Right flux boundary
@@ -75,11 +86,18 @@ subroutine computeRHS(msh,isupg,dt)
         call shapefunction(msh%nshp,0.5d0,[-0.5d0,0.5d0],qvals,w,dqvals)
         call shapefunction(msh%nshp,msh%xe(2,i),msh%xe(:,i),msh%q(1,:,i),qvals,dqvals)
         ql = sum(qvals)
+        dql = sum(dqvals)
         call shapefunction(msh%nshp,msh%xe(1,e2),msh%xe(:,e2),msh%q(1,:,e2),qvals,dqvals)
         qr = sum(qvals)
+        dqr = sum(dqvals)
         call flux(ql,qr,flx)
+        if(ivisc.eq.1) then
+          call fluxd(ql,dql,qr,dqr,dflx)
+        else
+          dflx = 0d0
+        endif
         do j = 1,msh%nshp
-            msh%rhs(:,j,i) = msh%rhs(:,j,i) - w(j)*flx
+            msh%rhs(:,j,i) = msh%rhs(:,j,i) - w(j)*(flx-dflx)
         enddo
       endif ! e1 ne e2
     endif ! iblank 

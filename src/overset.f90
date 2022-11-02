@@ -129,13 +129,13 @@ contains
     !
   end subroutine findIncompleteElements
   !
-  subroutine fixFluxIncompleteElements(mshB,mshA,elemInfo,nincomp,consoverset,foverlap,isupg,dt)
+  subroutine fixFluxIncompleteElements(mshB,mshA,elemInfo,nincomp,consoverset,foverlap,isupg,ivisc,dt)
     use bases
 
     ! Subtract half of overlap section from mesh A (stored in elemInfo)
     implicit none
     type(mesh), intent(inout) :: mshA,mshB
-    integer, intent(in) :: nincomp,consoverset,isupg
+    integer, intent(in) :: nincomp,consoverset,isupg,ivisc
     real*8, intent(inout) :: elemInfo(3,nincomp),foverlap
     real*8, intent(in) :: dt
     !
@@ -253,7 +253,7 @@ contains
                call shapefunction(mshA%nshp,xg,[x1,x2],qA,qtmp,dqtmp)
                qval = sum(qtmp)
                dqval = sum(dqtmp)/mshA%dx(eid)
-               call volint(qval,vol)
+               call volint(qval,dqval,vol,ivisc)
                do bb = 1,mshA%nshp
                  ! Volume Integral
                  mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) + dwtmp(bb)*vol*(mshA%wgauss(aa)*fact) ! scale gauss weights by length of remaining element parent
