@@ -129,21 +129,21 @@ contains
     !
   end subroutine findIncompleteElements
   !
-  subroutine fixFluxIncompleteElements(mshB,mshA,elemInfo,nincomp,consoverset,foverlap,isupg,ivisc,dt)
+  subroutine fixFluxIncompleteElements(mshB,mshA,elemInfo,nincomp,consoverset,foverlap,isupg,dt)
     use bases
 
     ! Subtract half of overlap section from mesh A (stored in elemInfo)
     implicit none
     type(mesh), intent(inout) :: mshA,mshB
-    integer, intent(in) :: nincomp,consoverset,isupg,ivisc
+    integer, intent(in) :: nincomp,consoverset,isupg
     real*8, intent(inout) :: elemInfo(3,nincomp),foverlap
     real*8, intent(in) :: dt
     !
     integer :: i,j,k,e,nrows,aa,bb,cc,eid,neigh
     real*8 :: x1,x2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp)
-    real*8 :: xrem(2),xcut(2),xc,lcut,xg,vol,flx,dflx,qL,dqL,qR,dqR,fact,xfac
+    real*8 :: xrem(2),xcut(2),xc,lcut,xg,vol,flx,qL,qR,fact,xfac
     real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp),tmp
-    real*8 ::qtmp(mshA%nshp),dqtmp(mshA%nshp),dq,dvol(mshA%nshp)!,dflx(mshA%nshp)
+    real*8 ::qtmp(mshA%nshp),dqtmp(mshA%nshp),dq,dvol(mshA%nshp),dflx(mshA%nshp)
     real*8 :: qval,dqval,dudt,resid,tau
     !
     ! elemInfo = incomplete elements on mesh A
@@ -185,19 +185,11 @@ contains
                call shapefunction(mshA%nshp,xcut(2),[x1,x2],wtmp,wtmp,dwtmp)
                call shapefunction(mshB%nshp,xcut(2),[y1,y2],qB,qtmp,dqtmp)
                qL = sum(qtmp)
-               dqL = sum(dqtmp)
                call shapefunction(mshA%nshp,xcut(2),[x1,x2],qA,qtmp,dqtmp)
                qR = sum(qtmp)
-               dqR = sum(dqtmp)
                call flux(qL,qR,flx)
-               if(ivisc.eq.1) then
-                 call fluxd(qL,dqL,qR,dqR,dflx)
-               else
-                 dflx = 0d0
-               endif
-
                do k = 1,mshA%nshp
-                 mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) + wtmp(k)*(flx-dflx)
+                 mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) + wtmp(k)*flx
                enddo
 
                ! Handle mesh A R node flux
@@ -206,18 +198,11 @@ contains
                neigh = mshA%face(2,eid)
                call shapefunction(mshA%nshp,x2,[x1,x2],qA,qtmp,dqtmp)
                qL = sum(qtmp)
-               dqL = sum(dqtmp)
                call shapefunction(mshA%nshp,x2,mshA%xe(:,neigh),mshA%q(1,:,neigh),qtmp,dqtmp)
                qR = sum(qtmp)
-               dqR = sum(dqtmp)
                call flux(qL,qR,flx)
-               if(ivisc.eq.1) then
-                 call fluxd(qL,dqL,qR,dqR,dflx)
-               else
-                 dflx = 0d0
-               endif
                do k = 1,mshA%nshp
-                 mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) - wtmp(k)*(flx-dflx)
+                 mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) - wtmp(k)*flx
                enddo
 
              elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem          
@@ -268,7 +253,7 @@ contains
                call shapefunction(mshA%nshp,xg,[x1,x2],qA,qtmp,dqtmp)
                qval = sum(qtmp)
                dqval = sum(dqtmp)/mshA%dx(eid)
-               call volint(qval,dqval,vol,ivisc)
+               call volint(qval,vol)
                do bb = 1,mshA%nshp
                  ! Volume Integral
                  mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) + dwtmp(bb)*vol*(mshA%wgauss(aa)*fact) ! scale gauss weights by length of remaining element parent
