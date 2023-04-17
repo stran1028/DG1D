@@ -34,13 +34,13 @@ program conservative_overset
   ! Set up the problem and bases types
 !  call set_type('linear_advection',ainf)
   call set_type('burgers')
-  ilim = 1      ! flag to control slope limiting
+  ilim = 0      ! flag to control slope limiting
   isupg = 0  ! supg flag
-  ieuler = 0
-  do conswitch = 0,1    ! cons overset loop 
+  ieuler = 1
+  do conswitch = 1,1    ! cons overset loop 
   do s = 2,2            ! shape function loop
   do noverlap = 1,1     ! foverlap loop
-  do order = 2,2      ! p-order loop
+  do order = 1,1      ! p-order loop
     sweep = 0d0
 
     if ((conswitch.eq.0).and.(noverlap.gt.1)) cycle 
