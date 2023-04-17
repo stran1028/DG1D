@@ -116,7 +116,7 @@ contains
     ! store info on the incomplete elems
     ! modified for DG, need both q endpts 
     ! and rhs vector
-    allocate(elemInfo(3,nincomp))
+    allocate(elemInfo(4,nincomp))
     k = 1
     do i=1,msh%nelem
        ib1=msh%iblank(1,i)
@@ -136,24 +136,24 @@ contains
     implicit none
     type(mesh), intent(inout) :: mshA,mshB
     integer, intent(in) :: nincomp,consoverset,isupg
-    real*8, intent(inout) :: elemInfo(3,nincomp),foverlap
+    real*8, intent(inout) :: elemInfo(4,nincomp),foverlap
     real*8, intent(in) :: dt
     !
-    integer :: i,j,k,e,nrows,aa,bb,cc,eid,neigh
-    real*8 :: x1,x2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp)
+    integer :: i,j,k,e,nrows,aa,bb,cc,eid,neigh,pid
+    real*8 :: x1,x2,xp1,xp2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp)
     real*8 :: xrem(2),xcut(2),xc,lcut,xg,vol,flx,qL,qR,fact,xfac
     real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp),tmp
     real*8 ::qtmp(mshA%nshp),dqtmp(mshA%nshp),dq,dvol(mshA%nshp),dflx(mshA%nshp)
     real*8 :: qval,dqval,dudt,resid,tau
     !
-    ! elemInfo = incomplete elements on mesh A
+    ! elemInfo = incomplete elements on mesh A 
+    !    (1: local elemID, 2: parent elemID, 3: xcut 1, 4: xcut 2)
     ! msh = mesh info of mesh B
     !
      iloop: do i=1,nincomp       ! Loop through incomplete elem of mesh A
        eid = elemInfo(1,i)
        x1=mshA%xe(1,eid) 
        x2=mshA%xe(2,eid) 
-       qA=mshA%q(1,:,eid) 
        eloop: do j=1,mshB%nelem  ! Loop through all elem of mesh B
           y1=mshB%xe(1,j)
           y2=mshB%xe(2,j)
@@ -178,32 +178,42 @@ contains
                else
                  xcut = [x1,x1]
                endif
-               xrem = elemInfo(2:3,i)
+               xrem = elemInfo(3:4,i)
+
+               ! parent element is element on right
+               pid = mshA%face(2,eid) 
+               elemInfo(2,i) = pid
+               mshA%child(pid) = eid
+               xp1=mshA%xe(1,pid) 
+               xp2=mshA%xe(2,pid) 
+               qA=mshA%q(1,:,pid) 
 
                ! add intermesh flux from mesh B interior to mesh A L node
+               ! Note we're adding to the parent element pid, not eid
                wtmp = 1d0
-               call shapefunction(mshA%nshp,xcut(2),[x1,x2],wtmp,wtmp,dwtmp)
+               call shapefunction(mshA%nshp,xcut(2),[xp1,xp2],wtmp,wtmp,dwtmp)
                call shapefunction(mshB%nshp,xcut(2),[y1,y2],qB,qtmp,dqtmp)
                qL = sum(qtmp)
-               call shapefunction(mshA%nshp,xcut(2),[x1,x2],qA,qtmp,dqtmp)
+               call shapefunction(mshA%nshp,xcut(2),[xp1,xp2],qA,qtmp,dqtmp)
                qR = sum(qtmp)
                call flux(qL,qR,flx)
                do k = 1,mshA%nshp
-                 mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) + wtmp(k)*flx
+                 mshA%rhs(:,k,pid) = mshA%rhs(:,k,pid) + wtmp(k)*flx
                enddo
 
-               ! Handle mesh A R node flux
-               wtmp = 1d0
-               call shapefunction(mshA%nshp,x2,[x1,x2],wtmp,wtmp,dwtmp)
-               neigh = mshA%face(2,eid)
-               call shapefunction(mshA%nshp,x2,[x1,x2],qA,qtmp,dqtmp)
-               qL = sum(qtmp)
-               call shapefunction(mshA%nshp,x2,mshA%xe(:,neigh),mshA%q(1,:,neigh),qtmp,dqtmp)
-               qR = sum(qtmp)
-               call flux(qL,qR,flx)
-               do k = 1,mshA%nshp
-                 mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) - wtmp(k)*flx
-               enddo
+!!! Don't need to do this anymore
+!               ! Handle mesh A R node flux
+!               wtmp = 1d0
+!               call shapefunction(mshA%nshp,x2,[x1,x2],wtmp,wtmp,dwtmp)
+!               neigh = mshA%face(2,eid)
+!               call shapefunction(mshA%nshp,x2,[xp1,xp2],qA,qtmp,dqtmp)
+!               qL = sum(qtmp)
+!               call shapefunction(mshA%nshp,x2,mshA%xe(:,neigh),mshA%q(1,:,neigh),qtmp,dqtmp)
+!               qR = sum(qtmp)
+!               call flux(qL,qR,flx)
+!               do k = 1,mshA%nshp
+!                 mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) - wtmp(k)*flx
+!               enddo
 
              elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem          
                ! Overlap is between y1 and x2
@@ -213,78 +223,89 @@ contains
                else
                  xcut = [x2,x2]
                endif
-               xrem = elemInfo(2:3,i)
+               xrem = elemInfo(3:4,i)
 
-               ! Handle mesh A L node flux 
-               wtmp = 1d0
-               call shapefunction(mshA%nshp,x1,[x1,x2],wtmp,wtmp,dwtmp)
-               neigh = mshA%face(1,eid)
-               call shapefunction(mshA%nshp,x1,mshA%xe(:,neigh),mshA%q(1,:,neigh),qtmp,dqtmp)
-               qL = sum(qtmp)
-               call shapefunction(mshA%nshp,x1,[x1,x2],qA,qtmp,dqtmp)
-               qR = sum(qtmp)
-               call flux(qL,qR,flx)
-               do k = 1,mshA%nshp
-                 mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) + wtmp(k)*flx
-               enddo
+               ! parent element is element on left
+               pid = mshA%face(1,eid) 
+               elemInfo(2,i) = pid
+               mshA%child(pid) = eid
+               xp1=mshA%xe(1,pid)
+               xp2=mshA%xe(2,pid)
+               qA=mshA%q(1,:,pid) 
+
+!!! Don't need to do this anymore
+!               ! Handle mesh A L node flux 
+!               wtmp = 1d0
+!               call shapefunction(mshA%nshp,x1,[x1,x2],wtmp,wtmp,dwtmp)
+!               neigh = mshA%face(1,eid)
+!               call shapefunction(mshA%nshp,x1,mshA%xe(:,neigh),mshA%q(1,:,neigh),qtmp,dqtmp)
+!               qL = sum(qtmp)
+!               call shapefunction(mshA%nshp,x1,[x1,x2],qA,qtmp,dqtmp)
+!               qR = sum(qtmp)
+!               call flux(qL,qR,flx)
+!               do k = 1,mshA%nshp
+!                 mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) + wtmp(k)*flx
+!               enddo
 
                ! add intermesh flux from mesh B interior to mesh A R node
+               ! Note we're adding to the parent element pid, not eid
                wtmp = 1d0
-               call shapefunction(mshA%nshp,xcut(1),[x1,x2],wtmp,wtmp,dwtmp)
+               call shapefunction(mshA%nshp,xcut(1),[xp1,xp2],wtmp,wtmp,dwtmp)
                call shapefunction(mshB%nshp,xcut(1),[y1,y2],qB,qtmp,dqtmp)
                qR = sum(qtmp)
-               call shapefunction(mshA%nshp,xcut(1),[x1,x2],qA,qtmp,dqtmp)
+               call shapefunction(mshA%nshp,xcut(1),[xp1,xp2],qA,qtmp,dqtmp)
                qL = sum(qtmp)
                call flux(ql,qr,flx)
                do k = 1,mshA%nshp
-                 mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) - wtmp(k)*flx
+                 mshA%rhs(:,k,pid) = mshA%rhs(:,k,pid) - wtmp(k)*flx
                enddo
 
              endif
              fact = (xrem(2)-xrem(1))/(x2-x1)
                
              dvol = 0d0
-             ! Compute volume integral over partial element 
+             ! Compute volume integral over partial element using parent element
+             ! bases functions
              do aa = 1,mshA%ngauss
                ! get shapefunction from msh A at quad pts of remaining element
                xg = mshA%xgauss(aa)*(xrem(2)-xrem(1))+0.5d0*(xrem(2)+xrem(1))
                wtmp = 1d0
-               call shapefunction(mshA%nshp,xg,[x1,x2],wtmp,wtmp,dwtmp)
-               call shapefunction(mshA%nshp,xg,[x1,x2],qA,qtmp,dqtmp)
+               call shapefunction(mshA%nshp,xg,[xp1,xp2],wtmp,wtmp,dwtmp)
+               call shapefunction(mshA%nshp,xg,[xp1,xp2],qA,qtmp,dqtmp)
                qval = sum(qtmp)
-               dqval = sum(dqtmp)/mshA%dx(eid)
+               dqval = sum(dqtmp)/mshA%dx(pid)
                call volint(qval,vol)
                do bb = 1,mshA%nshp
                  ! Volume Integral
-                 mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) + dwtmp(bb)*vol*(mshA%wgauss(aa)*fact) ! scale gauss weights by length of remaining element parent
+                 mshA%rhs(:,bb,pid) = mshA%rhs(:,bb,pid) + dwtmp(bb)*vol*(mshA%wgauss(aa)*fact) ! scale gauss weights by length of remaining element parent
 
                  dvol(bb) = dvol(bb) + dwtmp(bb)*vol*(mshA%wgauss(aa)*fact)
 
-                 ! SUPG Terms
-                 if(isupg.eq.1) then
-                   ! get residual
-                   call shapefunction(mshA%nshp,xg,[x1,x2],mshA%qold(1,:,eid),qtmp,dqtmp)
-                   dudt = (qval-sum(qtmp))/dt
-                   if (index(pde_descriptor,'linear_advection') > 0 ) then
-                     resid = dudt + a*dqval ! du/dt + a du/dx
-                     tau = sqrt(a*a/mshA%dxcut(eid)/mshA%dxcut(eid) + 4d0/dt/dt)
-                     tau = a/tau
-                   else if (index(pde_descriptor,'burgers') > 0) then
-                     resid = dudt + qval*dqval ! du/dt + u du/dx
-                     tau = sqrt(qval*qval/mshA%dxcut(eid)/mshA%dxcut(eid) + 4d0/dt/dt)
-                     tau = qval/tau
-                   endif
-                   if(qval.gt.1.5d0) then 
-                   write(*,*) ' '
-                   write(*,*) ' eid = ',eid
-                   write(*,*) '   u,uold,dt = ',qval, sum(qtmp),dt
-                   write(*,*) '   dudt, dqval =',dudt, dqval
-                   write(*,*) '   resid = ',resid
-                   write(*,*) '   tau = ',tau
-                   write(*,*) '   supg = ',tau*resid
-                   endif
-                   mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) - dwtmp(bb)*tau*resid*(mshA%wgauss(aa)*fact)
-                 endif ! supg
+!                 ! SUPG Terms
+!                 if(isupg.eq.1) then
+!                   ! get residual
+!                   call shapefunction(mshA%nshp,xg,[x1,x2],mshA%qold(1,:,eid),qtmp,dqtmp)
+!                   dudt = (qval-sum(qtmp))/dt
+!                   if (index(pde_descriptor,'linear_advection') > 0 ) then
+!                     resid = dudt + a*dqval ! du/dt + a du/dx
+!                     tau = sqrt(a*a/mshA%dxcut(eid)/mshA%dxcut(eid) + 4d0/dt/dt)
+!                     tau = a/tau
+!                   else if (index(pde_descriptor,'burgers') > 0) then
+!                     resid = dudt + qval*dqval ! du/dt + u du/dx
+!                     tau = sqrt(qval*qval/mshA%dxcut(eid)/mshA%dxcut(eid) + 4d0/dt/dt)
+!                     tau = qval/tau
+!                   endif
+!                   if(qval.gt.1.5d0) then 
+!                   write(*,*) ' '
+!                   write(*,*) ' eid = ',eid
+!                   write(*,*) '   u,uold,dt = ',qval, sum(qtmp),dt
+!                   write(*,*) '   dudt, dqval =',dudt, dqval
+!                   write(*,*) '   resid = ',resid
+!                   write(*,*) '   tau = ',tau
+!                   write(*,*) '   supg = ',tau*resid
+!                   endif
+!                   mshA%rhs(:,bb,eid) = mshA%rhs(:,bb,eid) - dwtmp(bb)*tau*resid*(mshA%wgauss(aa)*fact)
+!                 endif ! supg
                enddo ! nshp
              enddo ! ngauss
              cycle iloop
@@ -300,7 +321,7 @@ contains
     implicit none
     type(mesh), intent(inout) :: mshA,mshB
     integer, intent(in) :: nincomp,consoverset
-    real*8, intent(inout) :: elemInfo(3,nincomp),foverlap
+    real*8, intent(inout) :: elemInfo(4,nincomp),foverlap
     !
     integer :: i,j,k,e,nrows,aa,bb,cc,eid,index1
     real*8 :: x1,x2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp)
@@ -336,20 +357,20 @@ contains
                ! mshA will remove first half of overlap (from x1 to 0.5*(x1+y2))
                xcut = [x1,x1+xfac*(y2-x1)]
                if(consoverset.eq.1) then 
-                 elemInfo(2:3,i) = [xcut(2),x2]
+                 elemInfo(3:4,i) = [xcut(2),x2]
                  mshA%dxcut(i) = x2-xcut(2)
                else
-                 elemInfo(2:3,i) = [x1,x2]
+                 elemInfo(3:4,i) = [x1,x2]
                endif
              elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem          
                ! Overlap is between y1 and x2
                ! msh A will remove second half of overlap (from 0.5(y1+x2) to x2
                xcut = [x2-xfac*(x2-y1),x2]
                if(consoverset.eq.1) then 
-                 elemInfo(2:3,i) = [x1,xcut(1)]
+                 elemInfo(3:4,i) = [x1,xcut(1)]
                  mshA%dxcut(i) = xcut(1)-x1
                else
-                 elemInfo(2:3,i) = [x1,x2]
+                 elemInfo(3:4,i) = [x1,x2]
                endif
              endif
              lcut = xcut(2)-xcut(1)
@@ -380,6 +401,33 @@ contains
        enddo eloop
     enddo iloop
   end subroutine fixMassIncompleteElements
+  !
+  subroutine projectChild(msh,elemInfo,nincomp)
+    use bases
+
+    implicit none
+    type(mesh),intent(inout) :: msh
+    integer :: i,j,eid,pid
+    integer,intent(in) :: nincomp,elemInfo(4,nincomp)
+    real*8 :: x1,x2,xloc,qvals(msh%nshp),dqvals(msh%nshp),xp1,xp2
+
+    do i = 1,nincomp
+      eid = elemInfo(1,i)
+      pid = elemInfo(2,i)
+      xp1=msh%xe(1,pid)
+      xp2=msh%xe(2,pid)
+
+      if(shptype.eq.'legendre') then 
+      elseif(shptype.eq.'lagrange') then        
+        do j = 1,msh%nshp
+          ! compute q value at nodal point using parent element Q values
+          xloc = msh%x(msh%e2n(j,i))
+          call shapefunction(msh%nshp,xloc,[xp1,xp2],msh%q(1,:,pid),qvals,dqvals)
+          msh%q(1,j,eid) = SUM(qvals)
+        enddo ! loop over shape functions
+      endif
+    enddo ! loop over nincomp
+  end subroutine projectChild
   !
 end module overset
           

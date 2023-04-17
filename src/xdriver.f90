@@ -7,7 +7,7 @@ program conservative_overset
   implicit none
   !
   integer, parameter :: nmesh=2
-  integer :: i,s,ntime,n,j,k,m,order,consoverset,ilim,ieuler, isupg
+  integer :: i,s,ntime,n,j,k,m,order,consoverset,ilim,ieuler, isupg, ireg
   real*8 :: dt,mom1(2,nmesh),mom0(2,nmesh)
   real*8 :: err(nmesh)
   real*8, allocatable :: elemInfo1(:,:),elemInfo2(:,:)
@@ -36,6 +36,7 @@ program conservative_overset
   call set_type('burgers')
   ilim = 0      ! flag to control slope limiting
   isupg = 0  ! supg flag
+  ireg = 0 ! regularization flag
   ieuler = 1
   do conswitch = 1,1    ! cons overset loop 
   do s = 2,2            ! shape function loop
@@ -159,7 +160,6 @@ program conservative_overset
 
       write(*,*) 'Initial Area Under Curve: ', sum(mom0(1,:))
 
-      !
       ! Iterate in time
       rk = [1d0/4d0, 8d0/15d0,5d0/12d0, 3d0/4d0];
       do i=1,ntime
@@ -167,96 +167,95 @@ program conservative_overset
 !       write(*,*) 'TIMESTEP ',i
 !       write(*,*) '--------------------------'
        ! RK step 1
-        call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap,isupg)
+        call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap,isupg,ireg)
 
-if(ieuler.eq.1) then 
-        do j = 1,nmesh
-          ! Euler 1st order
-          msh(j)%q=msh(j)%q+dt*msh(j)%dq
-          msh(j)%sol=msh(j)%q
-        enddo
-        if(ilim.eq.1) then 
-        if(nmesh.gt.1) then 
-write(*,*) 'Limiting Grid 1...'
-          call genLimit2(msh(1)%q,msh(1)%vlim,msh(1),msh(2))
-          msh(1)%q = msh(1)%vlim
-          msh(1)%sol=msh(1)%q
-write(*,*) 'Limiting Grid 2...'
-          call genLimit2(msh(2)%q,msh(2)%vlim,msh(2),msh(1))
-          msh(2)%q = msh(2)%vlim
-          msh(2)%sol=msh(2)%q
-        else
-          call genLimit(msh(1)%q,msh(1)%vlim,msh(1))
-          msh(1)%q = msh(1)%vlim
-          msh(1)%sol=msh(1)%q
-        endif
-        endif
-else
-        do j = 1,nmesh
-          msh(j)%q=msh(j)%sol+rk(2)*dt*msh(j)%dq
-          msh(j)%sol=msh(j)%sol+rk(1)*dt*msh(j)%dq
-        enddo
-        if(ilim.eq.1) then
-          if(nmesh.gt.1) then 
-            call genLimit2(msh(1)%q,msh(1)%vlim,msh(1),msh(2))
-            msh(1)%q = msh(1)%vlim
-            call genLimit2(msh(1)%sol,msh(1)%vlim,msh(1),msh(2))
-            msh(1)%sol = msh(1)%vlim
-            call genLimit2(msh(2)%q,msh(2)%vlim,msh(2),msh(1))
-            msh(2)%q = msh(2)%vlim
-            call genLimit2(msh(2)%sol,msh(2)%vlim,msh(2),msh(1))
-            msh(2)%sol = msh(2)%vlim
-          else
-            call genLimit(msh(1)%q,msh(1)%vlim,msh(1))
-            msh(1)%q = msh(1)%vlim
-            call genLimit(msh(1)%sol,msh(1)%vlim,msh(1))
-            msh(1)%sol = msh(1)%vlim
-          endif
-        endif
+        if(ieuler.eq.1) then ! Euler 1st order
+          do j = 1,nmesh
+            msh(j)%q=msh(j)%q+dt*msh(j)%dq
+            msh(j)%sol=msh(j)%q
+          enddo
+          if(ilim.eq.1) then 
+            if(nmesh.gt.1) then 
+              write(*,*) 'Limiting Grid 1...'
+              call genLimit2(msh(1)%q,msh(1)%vlim,msh(1),msh(2))
+              msh(1)%q = msh(1)%vlim
+              msh(1)%sol=msh(1)%q
 
-        ! RK step 2
-        call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap,isupg)
-        do j = 1,nmesh
-          msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
-        enddo
-        if(ilim.eq.1) then
-          if(nmesh.gt.1) then 
-            call genLimit2(msh(1)%q,msh(1)%vlim,msh(1),msh(2))
-            msh(1)%q = msh(1)%vlim
-            call genLimit2(msh(2)%q,msh(2)%vlim,msh(2),msh(1))
-            msh(2)%q = msh(2)%vlim
-          else
-            call genLimit(msh(1)%q,msh(1)%vlim,msh(1))
-            msh(1)%q = msh(1)%vlim
+              write(*,*) 'Limiting Grid 2...'
+              call genLimit2(msh(2)%q,msh(2)%vlim,msh(2),msh(1))
+              msh(2)%q = msh(2)%vlim
+              msh(2)%sol=msh(2)%q
+            else
+              call genLimit(msh(1)%q,msh(1)%vlim,msh(1))
+              msh(1)%q = msh(1)%vlim
+              msh(1)%sol=msh(1)%q
+            endif
+          endif ! limiter
+        else ! RK3
+          do j = 1,nmesh
+            msh(j)%q=msh(j)%sol+rk(2)*dt*msh(j)%dq
+            msh(j)%sol=msh(j)%sol+rk(1)*dt*msh(j)%dq
+          enddo
+          if(ilim.eq.1) then
+            if(nmesh.gt.1) then 
+              call genLimit2(msh(1)%q,msh(1)%vlim,msh(1),msh(2))
+              msh(1)%q = msh(1)%vlim
+              call genLimit2(msh(1)%sol,msh(1)%vlim,msh(1),msh(2))
+              msh(1)%sol = msh(1)%vlim
+              call genLimit2(msh(2)%q,msh(2)%vlim,msh(2),msh(1))
+              msh(2)%q = msh(2)%vlim
+              call genLimit2(msh(2)%sol,msh(2)%vlim,msh(2),msh(1))
+              msh(2)%sol = msh(2)%vlim
+            else
+              call genLimit(msh(1)%q,msh(1)%vlim,msh(1))
+              msh(1)%q = msh(1)%vlim
+              call genLimit(msh(1)%sol,msh(1)%vlim,msh(1))
+              msh(1)%sol = msh(1)%vlim
+            endif
           endif
-        endif
 
-        ! RK step 3
-        call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap,isupg)
-        do j = 1,nmesh
-          msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
-        enddo
-        if(ilim.eq.1) then
-          if(nmesh.gt.1) then 
-            call genLimit2(msh(1)%sol,msh(1)%vlim,msh(1),msh(2))
-            msh(1)%sol = msh(1)%vlim
-            call genLimit2(msh(2)%sol,msh(2)%vlim,msh(2),msh(1))
-            msh(2)%sol = msh(2)%vlim
-          else
-            call genLimit(msh(1)%sol,msh(1)%vlim,msh(1))
-            msh(1)%sol = msh(1)%vlim
+          ! RK step 2
+          call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap,isupg,ireg)
+          do j = 1,nmesh
+            msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
+          enddo
+          if(ilim.eq.1) then
+            if(nmesh.gt.1) then 
+              call genLimit2(msh(1)%q,msh(1)%vlim,msh(1),msh(2))
+              msh(1)%q = msh(1)%vlim
+              call genLimit2(msh(2)%q,msh(2)%vlim,msh(2),msh(1))
+              msh(2)%q = msh(2)%vlim
+            else
+              call genLimit(msh(1)%q,msh(1)%vlim,msh(1))
+              msh(1)%q = msh(1)%vlim
+            endif
           endif
-        endif
-        msh(1)%q = msh(1)%sol
-        msh(2)%q = msh(2)%sol
+
+          ! RK step 3
+          call timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincomp2,foverlap,isupg,ireg)
+          do j = 1,nmesh
+            msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
+          enddo
+          if(ilim.eq.1) then
+            if(nmesh.gt.1) then 
+              call genLimit2(msh(1)%sol,msh(1)%vlim,msh(1),msh(2))
+              msh(1)%sol = msh(1)%vlim
+              call genLimit2(msh(2)%sol,msh(2)%vlim,msh(2),msh(1))
+              msh(2)%sol = msh(2)%vlim
+            else
+              call genLimit(msh(1)%sol,msh(1)%vlim,msh(1))
+              msh(1)%sol = msh(1)%vlim
+            endif
+          endif
+          msh(1)%q = msh(1)%sol
+          msh(2)%q = msh(2)%sol
   
-        ! copy over curr q values to qold
-        msh(1)%qold = msh(1)%q
-        msh(2)%qold = msh(2)%q
-
-endif
+          ! copy over curr q values to qold
+          msh(1)%qold = msh(1)%q
+          msh(2)%qold = msh(2)%q
+        endif ! Euler or RK
       enddo ! timesteps
-       !
+      
       ! write final output
       do n=1,nmesh
         call output(nmesh+n,msh(n))
@@ -268,7 +267,7 @@ endif
       sweep(h,3) = sum(mom1(1,:))-sum(mom0(1,:))
       write(*,*) '    Min Rem Frac M1: ',minval(msh(1)%dxcut)/dx(1)
       write(*,*) '    Min Rem Frac M2: ',minval(msh(2)%dxcut)/dx(2)
-      !
+      
       ! Clear memory
       do n = 1,nmesh
         call clearMem(msh(n))
@@ -283,14 +282,14 @@ endif
       write(*,*) '    Run time/step: ',(time(2)-time(1))/ntime
     enddo ! mesh sweep
 
-     write(*,*) ' '
-     write(*,*) 'FINAL SWEEP OUTPUT: '
-     write(*,*) '  H SWEEP L2 ERROR = ',sweep(:,1)
-     write(*,*) '  H SWEEP CONS AREA = ',sweep(:,2)
-     write(*,*) '  H SWEEP CONS ERROR = ',sweep(:,3)
-     write(*,*) '----------------------------------'
+    write(*,*) ' '
+    write(*,*) 'FINAL SWEEP OUTPUT: '
+    write(*,*) '  H SWEEP L2 ERROR = ',sweep(:,1)
+    write(*,*) '  H SWEEP CONS AREA = ',sweep(:,2)
+    write(*,*) '  H SWEEP CONS ERROR = ',sweep(:,3)
+    write(*,*) '----------------------------------'
   enddo ! p sweep
-  enddo
-  enddo
-  enddo
+  enddo ! overflap
+  enddo ! shape function
+  enddo ! cons overset
 end program conservative_overset

@@ -24,6 +24,3 @@ subroutine initvar(msh)
   msh%sol = msh%q
   !
 end subroutine initvar
-        
-        
-  

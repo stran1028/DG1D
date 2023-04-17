@@ -107,6 +107,11 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
     call shapefunction(msh%nshp,msh%xgauss(i),[-0.5d0,0.5d0],msh%shp(i,:),msh%shp(i,:),msh%dshp(i,:))
   enddo
   !
+  allocate(msh%child(msh%nelem))
+  do i=1,msh%nelem
+    msh%child(i) = i
+  enddo
+  !
   msh%nfaces=msh%nelem
   allocate(msh%face(2,msh%nelem))
   !

@@ -1,9 +1,9 @@
-subroutine solveDQ(msh,dt)
+subroutine solveDQ(msh,dt,ireg)
   use code_types
   implicit none
   type(mesh), intent(inout) :: msh
   real*8, intent(in) :: dt
-  integer :: i,j,k,index1,index2
+  integer :: i,j,k,index1,index2,ireg
   real*8 :: dx, detM, relax
   real*8, dimension(msh%nshp*msh%nshp) :: mass,L,U
   real*8, dimension(msh%nshp) :: y,b
@@ -16,7 +16,7 @@ subroutine solveDQ(msh,dt)
     ! solve Ax=b problem for x
 
     ! use Tikhonov Regularization on cut elements for stability
-    if(msh%dxcut(i)/msh%dx(i).lt.0.50) then ! only do for severely cut elements 
+    if(ireg.eq.1) then 
       lambda = 0d0    ! Adding the least amount of bias as possible
 
       ! assemble the regularized matrix [A; lambdaI] and vector [b; 0]
