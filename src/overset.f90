@@ -213,7 +213,7 @@ contains
                do k = 1,mshA%nshp
                  mshA%rhs(:,k,pid) = mshA%rhs(:,k,pid) + wtmp(k)*flx
                enddo
-
+               if(debug.eq.1) write(*,*) 'L Debug fflux: ',wtmp*flx
 !!! Don't need to do this anymore
 !               ! Handle mesh A R node flux
 !               wtmp = 1d0
@@ -276,6 +276,7 @@ contains
                do k = 1,mshA%nshp
                  mshA%rhs(:,k,pid) = mshA%rhs(:,k,pid) - wtmp(k)*flx
                enddo
+               if(debug.eq.1) write(*,*) 'R Debug fflux: ',wtmp*flx
 
              endif
              fact = (xrem(2)-xrem(1))/(x2-x1)
@@ -297,6 +298,8 @@ contains
                  mshA%rhs(:,bb,pid) = mshA%rhs(:,bb,pid) + dwtmp(bb)*vol*(mshA%wgauss(aa)*fact) ! scale gauss weights by length of remaining element parent
 
                  dvol(bb) = dvol(bb) + dwtmp(bb)*vol*(mshA%wgauss(aa)*fact)
+if(debug.eq.1) write(*,*) 'Debug volflux:',pid,bb,xg,dwtmp(bb),vol
+if(debug.eq.1) write(*,*) '    ',mshA%wgauss(aa),fact,dwtmp(bb)*vol*(mshA%wgauss(aa)*fact)
 
 !                 ! SUPG Terms
 !                 if(isupg.eq.1) then
@@ -325,6 +328,7 @@ contains
 !                 endif ! supg
                enddo ! nshp
              enddo ! ngauss
+if(debug.eq.1) write(*,*) '  Total cut volflux: ',dvol,mshA%rhs(:,:,pid)
              cycle iloop
           endif
        enddo eloop
@@ -513,13 +517,17 @@ write(*,*) 'debug mass: xp1,xp2,xg,wtmp = ',xp1,xp2,xg,wtmp
         write(*,*) 'Not coded yet XXX'
         call exit(1)
       else if(shptype.eq.'lagrange') then        
-        do j = 1,msh%nshp
-          ! compute q value at nodal point using parent element Q values
-          xloc = msh%x(msh%e2n(j,i))
-          call shapefunction(msh%nshp,xloc,[xp1,xp2],msh%q(1,:,pid),qvals,dqvals)
-          msh%q(1,j,eid) = SUM(qvals)
-        enddo ! loop over shape functions
-      endif
+        if(pid.ne.eid) then
+          do j = 1,msh%nshp
+            ! compute q value at nodal point using parent element Q values
+            xloc = msh%x(msh%e2n(j,eid))
+write(*,*) 'projectChild = ',eid,msh%xe(:,eid)
+write(*,*) '  ',xloc,xp1,xp2,qvals
+            call shapefunction(msh%nshp,xloc,[xp1,xp2],msh%q(1,:,pid),qvals,dqvals)
+            msh%q(1,j,eid) = SUM(qvals)
+          enddo ! loop over shape functions
+        endif
+      endif ! shp type
     enddo ! loop over nincomp
   end subroutine projectChild
   !

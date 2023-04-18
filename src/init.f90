@@ -20,7 +20,7 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   msh%iperiodic=iperiodic
   msh%nshp = order+1 
   !
-  msh%ngauss= msh%nshp+3
+  msh%ngauss= msh%nshp+1
   allocate(msh%xgauss(msh%ngauss))
   allocate(msh%wgauss(msh%ngauss))
   ! Parent element goes from -0.5 to 0.5

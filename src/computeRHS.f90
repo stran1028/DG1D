@@ -33,6 +33,10 @@ subroutine computeRHS(msh,isupg,dt)
            vol = vol*msh%dshp(j,k)*msh%wgauss(j)
            msh%rhs(1,k,i) = msh%rhs(1,k,i) + vol 
 
+if(msh%child(i).ne.i) then 
+write(*,*) 'Orig volflux: ',i,vol
+endif
+
 !           if(isupg.eq.1) then
 !             ! get residual
 !             call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],msh%qold(1,:,i),qvals,dqvals)
@@ -71,6 +75,7 @@ subroutine computeRHS(msh,isupg,dt)
           do j = 1,msh%nshp
               msh%rhs(:,j,i) = msh%rhs(:,j,i) + w(j)*flx
           enddo
+          if(msh%child(i).ne.i) write(*,*) 'L flux boundary: ',w*flx
         endif
         
         if(cid.le.i) then 
@@ -85,6 +90,7 @@ subroutine computeRHS(msh,isupg,dt)
           do j = 1,msh%nshp
               msh%rhs(:,j,i) = msh%rhs(:,j,i) - w(j)*flx
           enddo
+          if(msh%child(i).ne.i) write(*,*) 'R flux boundary: ',w*flx
         endif
       endif ! e1 ne e2
     endif ! iblank 

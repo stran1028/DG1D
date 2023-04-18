@@ -71,7 +71,9 @@ contains
        call exit(1)
     else     
        q = 1d0
-       if (x < 0.25d0) q=0d0
+       if (x < 1d0) q=0d0
+       if (x > 5d0) q=0d0
+
 
 !       q=exp(-20*x*x)
 !       if (abs(x) > 0.8d0) q=0d0
