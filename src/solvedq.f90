@@ -16,32 +16,32 @@ subroutine solveDQ(msh,dt,ireg)
     ! solve Ax=b problem for x
 
     ! use Tikhonov Regularization on cut elements for stability
-    if(ireg.eq.1) then 
-      lambda = 0d0    ! Adding the least amount of bias as possible
+!    if((ireg.eq.1).and.(msh%dxcut(i)/msh%dx(i).lt.0.50)) then 
+!      lambda = 0d0    ! Adding the least amount of bias as possible
 
-      ! assemble the regularized matrix [A; lambdaI] and vector [b; 0]
-      breg(1:msh%nshp) = msh%rhs(1,:,i)
-      breg(msh%nshp+1:2*msh%nshp) = 0d0 
+!      ! assemble the regularized matrix [A; lambdaI] and vector [b; 0]
+!      breg(1:msh%nshp) = msh%rhs(1,:,i)
+!      breg(msh%nshp+1:2*msh%nshp) = 0d0 
 
-      Areg = 0d0
-      AregT = 0d0
-      do j = 1,2*msh%nshp
-      do k = 1,msh%nshp
-         index1 = (j-1)*msh%nshp + k 
-         index2 = (k-1)*2*msh%nshp + j ! Note j and k are switched b/c I want the transpose
-         if(index1.le.msh%nshp*msh%nshp) then 
-           Areg(index1) = msh%mass(1,index1,i)
-         else
-           if(j-msh%nshp.eq.k) Areg(index1) = lambda
-           if(j-msh%nshp.ne.k) Areg(index1) = 0d0
-         endif
-         AregT(index2) = Areg(index1)
-      enddo
-      enddo
-
-      ! compute trans(A)*A and trans(A)*b
-      call matmat(AregT,Areg,A,msh%nshp,2*msh%nshp,msh%nshp)
-      call matvec(AregT,breg,msh%nshp,2*msh%nshp,b)
+!      Areg = 0d0
+!      AregT = 0d0
+!      do j = 1,2*msh%nshp
+!      do k = 1,msh%nshp
+!         index1 = (j-1)*msh%nshp + k 
+!         index2 = (k-1)*2*msh%nshp + j ! Note j and k are switched b/c I want the transpose
+!         if(index1.le.msh%nshp*msh%nshp) then 
+!           Areg(index1) = msh%mass(1,index1,i)
+!         else
+!           if(j-msh%nshp.eq.k) Areg(index1) = lambda
+!           if(j-msh%nshp.ne.k) Areg(index1) = 0d0
+!         endif
+!         AregT(index2) = Areg(index1)
+!      enddo
+!      enddo
+!
+!      ! compute trans(A)*A and trans(A)*b
+!      call matmat(AregT,Areg,A,msh%nshp,2*msh%nshp,msh%nshp)
+!      call matvec(AregT,breg,msh%nshp,2*msh%nshp,b)
 
       !write(*,*) ' '
       !write(*,*) 'eid ',i,msh%dxcut(i)/msh%dx(i),msh%dxcut(i),msh%dx(i)
@@ -53,16 +53,18 @@ subroutine solveDQ(msh,dt,ireg)
       !write(*,*) 'rhs1 ',b
       !write(*,*) ' '
 
-    else ! otherwise, do nothing
+!    else ! otherwise, do nothing
       A = msh%mass(1,:,i)
       b = msh%rhs(1,:,i)
-
-    endif
+!    endif
 
     ! Solve Ax=b using LU decomp
-    call lu(A,msh%nshp,L,U)
-    call forwprop(L,b,msh%nshp,y)
-    call backprop(U,y,msh%nshp,msh%dq(1,:,i))
+    ! skip cut elements, those are handled by their parents
+    if(msh%dxcut(i).eq.msh%dx(i)) then 
+      call lu(A,msh%nshp,L,U)
+      call forwprop(L,b,msh%nshp,y)
+      call backprop(U,y,msh%nshp,msh%dq(1,:,i))
+    endif
 
   enddo
   !

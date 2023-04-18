@@ -194,7 +194,7 @@ contains
                xp2=mshA%xe(2,pid) 
                if(debug.eq.1) then
                  write(*,*) 'L node inside mesh B:'
-                 write(*,*) '  Mesh A elem:',i,eid,x1,x2
+                 write(*,*) '  Mesh A elem:',eid,x1,x2
                  write(*,*) '  Mesh B elem:',y1,y2
                  write(*,*) '  ElemInfo:',elemInfo(:,i)
                  write(*,*) '  Parent:',pid,xp1,xp2,qA
@@ -243,7 +243,7 @@ contains
                xp2=mshA%xe(2,pid)
                if(debug.eq.1) then
                  write(*,*) 'R node inside mesh B:'
-                 write(*,*) '  Mesh A elem:',i,eid,x1,x2
+                 write(*,*) '  Mesh A elem:',eid,x1,x2
                  write(*,*) '  Mesh B elem:',y1,y2
                  write(*,*) '  ElemInfo:',elemInfo(:,i)
                  write(*,*) '  Parent:',pid,xp1,xp2,qA
@@ -366,7 +366,6 @@ contains
        eid = elemInfo(1,i)
        x1=mshA%xe(1,eid) 
        x2=mshA%xe(2,eid) 
-       qA=mshA%q(1,:,eid) 
        eloop: do j=1,mshB%nelem  ! Loop through all elem of mesh B
           y1=mshB%xe(1,j)
           y2=mshB%xe(2,j)
@@ -397,12 +396,15 @@ contains
                  pid = eid
                endif
                elemInfo(2,i) = pid
+               xp1=mshA%xe(1,pid)
+               xp2=mshA%xe(2,pid)
                if(debug.eq.1) then
                  write(*,*) 'R node inside mesh B:'
-                 write(*,*) '  Mesh A elem:',i,eid,x1,x2
+                 write(*,*) '  Mesh A elem:',eid,x1,x2
                  write(*,*) '  Mesh B elem:',y1,y2
+                 write(*,*) '  xcut:',xcut(1),xcut(2)
                  write(*,*) '  ElemInfo:',elemInfo(:,i)
-                 write(*,*) '  Parent:',pid
+                 write(*,*) '  Parent:',pid,xp1,xp2
                  write(*,*) ' ' 
                endif
              elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem          
@@ -419,25 +421,48 @@ contains
                  pid = eid
                endif
                elemInfo(2,i) = pid
+               xp1=mshA%xe(1,pid)
+               xp2=mshA%xe(2,pid)
                if(debug.eq.1) then
                  write(*,*) 'L node inside mesh B:'
-                 write(*,*) '  Mesh A elem:',i,eid,x1,x2
+                 write(*,*) '  Mesh A elem:',eid,x1,x2
                  write(*,*) '  Mesh B elem:',y1,y2
+                 write(*,*) '  xcut:',xcut(1),xcut(2)
                  write(*,*) '  ElemInfo:',elemInfo(:,i)
-                 write(*,*) '  Parent:',pid
+                 write(*,*) '  Parent:',pid,xp1,xp2
                  write(*,*) ' ' 
                endif
+             endif ! L or R side
+             if(debug.eq.1) then
+               write(*,*) '  Original Mass:',mshA%mass(1,:,pid)
+               write(*,*) ' ' 
              endif
-             lcut = xcut(2)-xcut(1)
-             xc = 0.5*(xcut(1)+xcut(2))   ! center of section to be removed
                
              ! Adjust mass matrix 
              if(consoverset.eq.1) then 
+               ! add additional mass over full child cell
+               do aa = 1,mshA%ngauss
+                 xg = mshA%xgauss(aa)*mshA%dx(eid)+0.5d0*(mshA%xe(1,eid)+mshA%xe(2,eid))
+                 wtmp = 1d0
+                 call shapefunction(mshA%nshp,xg,[xp1,xp2],wtmp,wtmp,dwtmp)
+                 do bb = 1,mshA%nshp
+                 do cc = 1,mshA%nshp
+                      index1 = (bb-1)*mshA%nshp+cc
+                      ! Fix mass matrix
+                      mshA%mass(:,index1,pid) = mshA%mass(:,index1,pid) + wtmp(bb)*wtmp(cc)*mshA%wgauss(aa)*mshA%dx(eid)
+                 enddo ! nshp
+                 enddo ! nshp
+               enddo ! ngauss
+
+               ! subtract child cell's cut portion
+               lcut = xcut(2)-xcut(1)
+               xc = 0.5*(xcut(1)+xcut(2))   ! center of section to be removed
                do aa = 1,mshA%ngauss
                  ! get shapefunction from msh A at quad pts of cut section
                  xg = mshA%xgauss(aa)*lcut+xc
                  wtmp = 1d0
                  call shapefunction(mshA%nshp,xg,[xp1,xp2],wtmp,wtmp,dwtmp)
+write(*,*) 'debug mass: xp1,xp2,xg,wtmp = ',xp1,xp2,xg,wtmp
                  do bb = 1,mshA%nshp
                  do cc = 1,mshA%nshp
                       index1 = (bb-1)*mshA%nshp+cc

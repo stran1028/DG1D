@@ -34,7 +34,7 @@ program conservative_overset
   ieuler = 1
   do conswitch = 1,1    ! cons overset loop 
   do s = 1,1            ! shape function loop
-  do noverlap = 3,3     ! foverlap loop
+  do noverlap = 1,1     ! foverlap loop
   do order = 1,1      ! p-order loop
     sweep = 0d0
 
