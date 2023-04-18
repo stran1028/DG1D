@@ -5,7 +5,7 @@ subroutine timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincom
    implicit none
 
    integer, intent(in) :: nmesh,consoverset,isupg,ireg
-   integer :: n,nincomp1,nincomp2
+   integer :: n,nincomp1,nincomp2,debug
    real*8, intent(inout) :: elemInfo1(4,nincomp1),elemInfo2(4,nincomp2)
    real*8, intent(inout) :: foverlap
    real*8, intent(in) :: dt
@@ -13,10 +13,12 @@ subroutine timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincom
 
    ! Adjust RHS based on overlaps
    if (nmesh > 1) then
+      debug = 0
       call fixfluxIncompleteElements(msh(1),msh(2),elemInfo2,nincomp2,&
-              consoverset,foverlap,isupg,dt)
+              consoverset,foverlap,isupg,dt,debug)
+      debug = 1
       call fixfluxIncompleteElements(msh(2),msh(1),elemInfo1,nincomp1,&
-              consoverset,foverlap,isupg,dt)
+              consoverset,foverlap,isupg,dt,debug)
    end if
 
    ! compute interior element RHS

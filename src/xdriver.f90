@@ -11,7 +11,7 @@ program conservative_overset
   real*8 :: dt,mom1(2,nmesh),mom0(2,nmesh)
   real*8 :: err(nmesh)
   real*8, allocatable :: elemInfo1(:,:),elemInfo2(:,:)
-  integer :: nincomp1,nincomp2,nrk
+  integer :: nincomp1,nincomp2,nrk,debug
   integer :: conswitch,noverlap
   real*8 :: rk(4),dx(nmesh),ainf,cfl,foverlap,sweep(5,3)
   real*8 :: test1(6),test2(6)
@@ -25,12 +25,6 @@ program conservative_overset
   cfl = 0.01d0
   ainf = 1d0
   !
-  if((foverlap.gt.1d0).or.(foverlap.lt.0d0)) then 
-    write(*,*) 'foverlap wrong. try again.'
-    call exit(1)
-  endif
-  !
-
   ! Set up the problem and bases types
   call set_type('linear_advection',ainf)
 !  call set_type('burgers')
@@ -38,9 +32,9 @@ program conservative_overset
   isupg = 0  ! supg flag
   ireg = 0 ! regularization flag
   ieuler = 1
-  do conswitch = 0,0    ! cons overset loop 
+  do conswitch = 1,1    ! cons overset loop 
   do s = 1,1            ! shape function loop
-  do noverlap = 1,1     ! foverlap loop
+  do noverlap = 3,3     ! foverlap loop
   do order = 1,1      ! p-order loop
     sweep = 0d0
 
@@ -109,11 +103,12 @@ program conservative_overset
 
     !  m2start = -0.5 - dx(2)*.95 !! stress test w/ 95% cut
 !      m2start = -0.5 - dx(2)*.5 !! stress test w/ 95% cut
-       m2start = -.4
+       dx = [1d0,.5d0]
+       m2start = 1.75d0
 
       ! Compute parameters
       dt=cfl*minval(dx)/ainf
-      ntime = 2 !1.25*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
+      ntime = 1 !1.25*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
       write(*,*) ' '
       write(*,*) '    h, dx = ',h,dx
       write(*,*) '    m2start = ',m2start
@@ -124,8 +119,10 @@ program conservative_overset
       write(*,*) '    ntime = ',ntime
       !
       ! Initialize the mesh(es)
-      call init_mesh(msh(1),[-1d0,1d0],dx(1),1,order)
-      call init_mesh(msh(2),[m2start,m2start+0.75d0],dx(2),0,order)
+      call init_mesh(msh(1),[0d0,8d0],dx(1),1,order)
+      call init_mesh(msh(2),[m2start,m2start+2d0],dx(2),0,order)
+!      call init_mesh(msh(1),[-1d0,1d0],dx(1),1,order)
+!      call init_mesh(msh(2),[m2start,m2start+0.75d0],dx(2),0,order)
 !      call init_mesh(msh(2),[-0.268d0,0.732d0],dx(2),0,order)
       !
       do n=1,nmesh
@@ -146,10 +143,12 @@ program conservative_overset
         call fixOverlap(msh(2),msh(1))
         call findIncompleteElements(msh(1),elemInfo1,nincomp1)
         call findIncompleteElements(msh(2),elemInfo2,nincomp2)
+        debug = 0
         call fixMassIncompleteElements(msh(1),msh(2),elemInfo2,nincomp2,&
-                consoverset,foverlap)
+                consoverset,foverlap,debug)
+        debug = 1
         call fixMassIncompleteElements(msh(2),msh(1),elemInfo1,nincomp1,&
-                consoverset,foverlap)
+                consoverset,foverlap,debug)
       end if
       !
 

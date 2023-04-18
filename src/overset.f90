@@ -129,13 +129,13 @@ contains
     !
   end subroutine findIncompleteElements
   !
-  subroutine fixFluxIncompleteElements(mshB,mshA,elemInfo,nincomp,consoverset,foverlap,isupg,dt)
+  subroutine fixFluxIncompleteElements(mshB,mshA,elemInfo,nincomp,consoverset,foverlap,isupg,dt,debug)
     use bases
 
     ! Subtract half of overlap section from mesh A (stored in elemInfo)
     implicit none
     type(mesh), intent(inout) :: mshA,mshB
-    integer, intent(in) :: nincomp,consoverset,isupg
+    integer, intent(in) :: nincomp,consoverset,isupg,debug
     real*8, intent(inout) :: elemInfo(4,nincomp),foverlap
     real*8, intent(in) :: dt
     !
@@ -150,6 +150,13 @@ contains
     !    (1: local elemID, 2: parent elemID, 3: xcut 1, 4: xcut 2)
     ! msh = mesh info of mesh B
     !
+     if(debug.eq.1) then
+       write(*,*) ' '
+       write(*,*) '--------------------------------------'
+       write(*,*) 'Entering fixFluxIncompleteElements'
+       write(*,*) '--------------------------------------'
+       write(*,*) ' '
+     endif
      iloop: do i=1,nincomp       ! Loop through incomplete elem of mesh A
        eid = elemInfo(1,i)
        x1=mshA%xe(1,eid) 
@@ -172,25 +179,28 @@ contains
 
              if ((x1-y1)*(x1-y2) .le. 0.0) then ! L node of mesh A is inside of mesh B elem
                ! parent element is element on right
-               pid = mshA%face(2,eid) 
-               elemInfo(2,i) = pid
-               xp1=mshA%xe(1,pid) 
-               xp2=mshA%xe(2,pid) 
-               qA=mshA%q(1,:,pid) 
 
                ! Full overlap is between x1 and y2
                ! mshA will remove first section of overlap 
                if(consoverset.eq.1) then 
-                 ! Note we're adding to the parent element pid, not eid
                  xcut = [x1,x1+xfac*(y2-x1)]
-                 mshA%child(pid) = eid
                else
                  xcut = [x1,x1]
-                 pid = eid
-                 xp1 = x1
-                 xp2 = x2
                endif
                xrem = elemInfo(3:4,i)
+               pid = elemInfo(2,i)
+               qA=mshA%q(1,:,pid) 
+               xp1=mshA%xe(1,pid) 
+               xp2=mshA%xe(2,pid) 
+               if(debug.eq.1) then
+                 write(*,*) 'L node inside mesh B:'
+                 write(*,*) '  Mesh A elem:',i,eid,x1,x2
+                 write(*,*) '  Mesh B elem:',y1,y2
+                 write(*,*) '  ElemInfo:',elemInfo(:,i)
+                 write(*,*) '  Parent:',pid,xp1,xp2,qA
+                 write(*,*) '  Parent Na, qA= ',wtmp
+                 write(*,*) ' ' 
+               endif
 
                ! add intermesh flux from mesh B interior to mesh A L node
                wtmp = 1d0
@@ -219,25 +229,26 @@ contains
 !               enddo
 
              elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem          
-               ! parent element is element on left
-               pid = mshA%face(1,eid) 
-               elemInfo(2,i) = pid
-               xp1=mshA%xe(1,pid)
-               xp2=mshA%xe(2,pid)
-               qA=mshA%q(1,:,pid) 
-
                ! Overlap is between y1 and x2
                ! msh A will remove second half of overlap (from 0.5(y1+x2) to x2
                if(consoverset.eq.1) then 
                  xcut = [x2-xfac*(x2-y1),x2]
-                 mshA%child(pid) = eid
                else
                  xcut = [x2,x2]
-                 pid = eid
-                 xp1 = x1
-                 xp2 = x2
                endif
                xrem = elemInfo(3:4,i)
+               pid = elemInfo(2,i)
+               qA=mshA%q(1,:,pid) 
+               xp1=mshA%xe(1,pid)
+               xp2=mshA%xe(2,pid)
+               if(debug.eq.1) then
+                 write(*,*) 'R node inside mesh B:'
+                 write(*,*) '  Mesh A elem:',i,eid,x1,x2
+                 write(*,*) '  Mesh B elem:',y1,y2
+                 write(*,*) '  ElemInfo:',elemInfo(:,i)
+                 write(*,*) '  Parent:',pid,xp1,xp2,qA
+                 write(*,*) ' ' 
+               endif
 
 !!! Don't need to do this anymore
 !               ! Handle mesh A L node flux 
@@ -318,25 +329,39 @@ contains
           endif
        enddo eloop
     enddo iloop
+     if(debug.eq.1) then
+       write(*,*) ' '
+       write(*,*) '--------------------------------------'
+       write(*,*) 'Exiting fixFluxIncompleteElements'
+       write(*,*) '--------------------------------------'
+       write(*,*) ' '
+     endif
   end subroutine fixFluxIncompleteElements
   !
-  subroutine fixMassIncompleteElements(mshB,mshA,elemInfo,nincomp,consoverset,foverlap)
+  subroutine fixMassIncompleteElements(mshB,mshA,elemInfo,nincomp,consoverset,foverlap,debug)
     use bases
 
     ! Subtract half of overlap section from mesh A (stored in elemInfo)
     implicit none
     type(mesh), intent(inout) :: mshA,mshB
-    integer, intent(in) :: nincomp,consoverset
+    integer, intent(in) :: nincomp,consoverset,debug
     real*8, intent(inout) :: elemInfo(4,nincomp),foverlap
     !
-    integer :: i,j,k,e,nrows,aa,bb,cc,eid,index1
-    real*8 :: x1,x2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp)
+    integer :: i,j,k,e,nrows,aa,bb,cc,eid,index1,pid
+    real*8 :: x1,x2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp),xp1,xp2
     real*8 :: xcut(2),xc,lcut,xg,xfac
     real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp)
     !
     ! elemInfo = incomplete elements on mesh A
     ! msh = mesh info of mesh B
     !
+     if(debug.eq.1) then
+       write(*,*) ' '
+       write(*,*) '--------------------------------------'
+       write(*,*) 'Entering fixMassIncompleteElements'
+       write(*,*) '--------------------------------------'
+       write(*,*) ' '
+     endif
      iloop: do i=1,nincomp       ! Loop through incomplete elem of mesh A
        eid = elemInfo(1,i)
        x1=mshA%xe(1,eid) 
@@ -365,8 +390,20 @@ contains
                if(consoverset.eq.1) then 
                  elemInfo(3:4,i) = [xcut(2),x2]
                  mshA%dxcut(i) = x2-xcut(2)
+                 pid = mshA%face(2,eid)
+                 mshA%child(pid) = eid
                else
                  elemInfo(3:4,i) = [x1,x2]
+                 pid = eid
+               endif
+               elemInfo(2,i) = pid
+               if(debug.eq.1) then
+                 write(*,*) 'R node inside mesh B:'
+                 write(*,*) '  Mesh A elem:',i,eid,x1,x2
+                 write(*,*) '  Mesh B elem:',y1,y2
+                 write(*,*) '  ElemInfo:',elemInfo(:,i)
+                 write(*,*) '  Parent:',pid
+                 write(*,*) ' ' 
                endif
              elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem          
                ! Overlap is between y1 and x2
@@ -375,8 +412,20 @@ contains
                if(consoverset.eq.1) then 
                  elemInfo(3:4,i) = [x1,xcut(1)]
                  mshA%dxcut(i) = xcut(1)-x1
+                 pid = mshA%face(1,eid)
+                 mshA%child(pid) = eid
                else
                  elemInfo(3:4,i) = [x1,x2]
+                 pid = eid
+               endif
+               elemInfo(2,i) = pid
+               if(debug.eq.1) then
+                 write(*,*) 'L node inside mesh B:'
+                 write(*,*) '  Mesh A elem:',i,eid,x1,x2
+                 write(*,*) '  Mesh B elem:',y1,y2
+                 write(*,*) '  ElemInfo:',elemInfo(:,i)
+                 write(*,*) '  Parent:',pid
+                 write(*,*) ' ' 
                endif
              endif
              lcut = xcut(2)-xcut(1)
@@ -388,24 +437,35 @@ contains
                  ! get shapefunction from msh A at quad pts of cut section
                  xg = mshA%xgauss(aa)*lcut+xc
                  wtmp = 1d0
-                 call shapefunction(mshA%nshp,xg,[x1,x2],wtmp,wtmp,dwtmp)
+                 call shapefunction(mshA%nshp,xg,[xp1,xp2],wtmp,wtmp,dwtmp)
                  do bb = 1,mshA%nshp
                  do cc = 1,mshA%nshp
                       index1 = (bb-1)*mshA%nshp+cc
                       ! Fix mass matrix
-                      mshA%mass(:,index1,eid) = mshA%mass(:,index1,eid) - wtmp(bb)*wtmp(cc)*mshA%wgauss(aa)*lcut
+                      mshA%mass(:,index1,pid) = mshA%mass(:,index1,pid) - wtmp(bb)*wtmp(cc)*mshA%wgauss(aa)*lcut
                  enddo ! nshp
   
                  enddo ! nshp
                enddo ! ngauss
 !  write(*,*) ' '
 !  write(*,*) 'Mass 2: = ',eid,lcut/mshA%dx(eid),mshA%mass(1,:,eid)
+               if(debug.eq.1) then
+                 write(*,*) '  Modified Mass:',mshA%mass(1,:,pid)
+                 write(*,*) ' ' 
+               endif
              endif
 
              cycle iloop
           endif
        enddo eloop
     enddo iloop
+     if(debug.eq.1) then
+       write(*,*) ' '
+       write(*,*) '--------------------------------------'
+       write(*,*) 'Exiting fixMassIncompleteElements'
+       write(*,*) '--------------------------------------'
+       write(*,*) ' '
+     endif
   end subroutine fixMassIncompleteElements
   !
   subroutine projectChild(msh,elemInfo,nincomp)
