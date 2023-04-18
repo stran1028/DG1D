@@ -27,7 +27,6 @@ contains
     use bases
     type(mesh), intent(inout)::msh
     integer i,j,k
-!    real*8 :: mass(4),detM,invM(4)
     real*8,dimension(msh%nshp*msh%nshp) :: L,U
     real*8,dimension(msh%nshp) :: y
     real*8 :: qvals(msh%nshp),dqvals(msh%nshp),f(msh%nshp),tmp,xloc,dx
@@ -37,12 +36,6 @@ contains
     ! ub = M^-1 int(Na y(x,0))
     do i = 1,msh%nelem
       dx = msh%xe(2,i)-msh%xe(1,i)
-
-!      mass = [msh%mass(1,1,1,i), msh%mass(1,1,2,i), msh%mass(1,2,1,i),msh%mass(1,2,2,i)]
-!      detM = mass(1)*mass(4) - mass(2)*mass(3)
-!      invM = [mass(4),-mass(2),-mass(3),mass(1)]
-!      invM = invM/(1e-16+detM)
-
       f = 0.0d0
       do j = 1,msh%ngauss
         xloc = (msh%xgauss(j)+0.5d0)*dx + msh%xe(1,i)
@@ -64,9 +57,6 @@ contains
       call forwprop(L,f,msh%nshp,y)
       call backprop(U,y,msh%nshp,msh%q(1,:,i))
 
-!       msh%q(1,:,:) = 0d0
-!       msh%q(1,1,:) = 1d0
-
     enddo
   end subroutine initqleg
   !
@@ -74,16 +64,17 @@ contains
     implicit none
     real*8, intent(in) :: x
     real*8, intent(out) :: q(:)
-!    q=1d0
-    !return
 
     if ((index(pde_descriptor,'linear_advection') .le. 0) .and. &
         (index(pde_descriptor, 'burgers') .le. 0)) then
        write(6,*) 'problem type not implemented'
        call exit(1)
     else     
-       q=exp(-20*x*x)
-       if (abs(x) > 0.8d0) q=0d0
+       q = 1d0
+       if (abs(x) > 0.5d0) q=0d0
+
+!       q=exp(-20*x*x)
+!       if (abs(x) > 0.8d0) q=0d0
 !       q=exp(-0.01*x*x)
 !       if (abs(x) > 40d0) q=0d0
     endif

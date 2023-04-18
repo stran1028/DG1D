@@ -33,6 +33,6 @@ subroutine timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincom
    if((nmesh.gt.1).and.(consoverset.eq.1)) then 
       call projectChild(msh(1),elemInfo1,nincomp1)
       call projectChild(msh(2),elemInfo2,nincomp2)
-   enddo
+   endif
 
 end subroutine timestep

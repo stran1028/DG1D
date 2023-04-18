@@ -139,7 +139,7 @@ contains
     real*8, intent(inout) :: elemInfo(4,nincomp),foverlap
     real*8, intent(in) :: dt
     !
-    integer :: i,j,k,e,nrows,aa,bb,cc,eid,neigh,pid
+    integer :: i,j,k,e,nrows,aa,bb,cc,eid,neigh,id,pid
     real*8 :: x1,x2,xp1,xp2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp)
     real*8 :: xrem(2),xcut(2),xc,lcut,xg,vol,flx,qL,qR,fact,xfac
     real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp),tmp
@@ -171,15 +171,6 @@ contains
              endif
 
              if ((x1-y1)*(x1-y2) .le. 0.0) then ! L node of mesh A is inside of mesh B elem
-               ! Full overlap is between x1 and y2
-               ! mshA will remove first section of overlap 
-               if(consoverset.eq.1) then 
-                 xcut = [x1,x1+xfac*(y2-x1)]
-               else
-                 xcut = [x1,x1]
-               endif
-               xrem = elemInfo(3:4,i)
-
                ! parent element is element on right
                pid = mshA%face(2,eid) 
                elemInfo(2,i) = pid
@@ -188,8 +179,20 @@ contains
                xp2=mshA%xe(2,pid) 
                qA=mshA%q(1,:,pid) 
 
+               ! Full overlap is between x1 and y2
+               ! mshA will remove first section of overlap 
+               if(consoverset.eq.1) then 
+                 ! Note we're adding to the parent element pid, not eid
+                 xcut = [x1,x1+xfac*(y2-x1)]
+               else
+                 xcut = [x1,x1]
+                 pid = eid
+                 xp1 = x1
+                 xp2 = x2
+               endif
+               xrem = elemInfo(3:4,i)
+
                ! add intermesh flux from mesh B interior to mesh A L node
-               ! Note we're adding to the parent element pid, not eid
                wtmp = 1d0
                call shapefunction(mshA%nshp,xcut(2),[xp1,xp2],wtmp,wtmp,dwtmp)
                call shapefunction(mshB%nshp,xcut(2),[y1,y2],qB,qtmp,dqtmp)
@@ -216,15 +219,6 @@ contains
 !               enddo
 
              elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem          
-               ! Overlap is between y1 and x2
-               ! msh A will remove second half of overlap (from 0.5(y1+x2) to x2
-               if(consoverset.eq.1) then 
-                 xcut = [x2-xfac*(x2-y1),x2]
-               else
-                 xcut = [x2,x2]
-               endif
-               xrem = elemInfo(3:4,i)
-
                ! parent element is element on left
                pid = mshA%face(1,eid) 
                elemInfo(2,i) = pid
@@ -232,6 +226,18 @@ contains
                xp1=mshA%xe(1,pid)
                xp2=mshA%xe(2,pid)
                qA=mshA%q(1,:,pid) 
+
+               ! Overlap is between y1 and x2
+               ! msh A will remove second half of overlap (from 0.5(y1+x2) to x2
+               if(consoverset.eq.1) then 
+                 xcut = [x2-xfac*(x2-y1),x2]
+               else
+                 xcut = [x2,x2]
+                 pid = eid
+                 xp1 = x1
+                 xp2 = x2
+               endif
+               xrem = elemInfo(3:4,i)
 
 !!! Don't need to do this anymore
 !               ! Handle mesh A L node flux 
@@ -408,7 +414,8 @@ contains
     implicit none
     type(mesh),intent(inout) :: msh
     integer :: i,j,eid,pid
-    integer,intent(in) :: nincomp,elemInfo(4,nincomp)
+    integer,intent(in) :: nincomp
+    real*8, intent(in) :: elemInfo(4,nincomp)
     real*8 :: x1,x2,xloc,qvals(msh%nshp),dqvals(msh%nshp),xp1,xp2
 
     do i = 1,nincomp
@@ -418,7 +425,9 @@ contains
       xp2=msh%xe(2,pid)
 
       if(shptype.eq.'legendre') then 
-      elseif(shptype.eq.'lagrange') then        
+        write(*,*) 'Not coded yet XXX'
+        call exit(1)
+      else if(shptype.eq.'lagrange') then        
         do j = 1,msh%nshp
           ! compute q value at nodal point using parent element Q values
           xloc = msh%x(msh%e2n(j,i))

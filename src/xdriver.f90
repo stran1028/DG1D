@@ -32,14 +32,14 @@ program conservative_overset
   !
 
   ! Set up the problem and bases types
-!  call set_type('linear_advection',ainf)
-  call set_type('burgers')
+  call set_type('linear_advection',ainf)
+!  call set_type('burgers')
   ilim = 0      ! flag to control slope limiting
   isupg = 0  ! supg flag
   ireg = 0 ! regularization flag
   ieuler = 1
-  do conswitch = 1,1    ! cons overset loop 
-  do s = 2,2            ! shape function loop
+  do conswitch = 0,0    ! cons overset loop 
+  do s = 1,1            ! shape function loop
   do noverlap = 1,1     ! foverlap loop
   do order = 1,1      ! p-order loop
     sweep = 0d0
@@ -108,11 +108,12 @@ program conservative_overset
       endif
 
     !  m2start = -0.5 - dx(2)*.95 !! stress test w/ 95% cut
-      m2start = -0.5 - dx(2)*.5 !! stress test w/ 95% cut
+!      m2start = -0.5 - dx(2)*.5 !! stress test w/ 95% cut
+       m2start = -.4
 
       ! Compute parameters
       dt=cfl*minval(dx)/ainf
-      ntime = 1.25*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
+      ntime = 2 !1.25*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
       write(*,*) ' '
       write(*,*) '    h, dx = ',h,dx
       write(*,*) '    m2start = ',m2start
