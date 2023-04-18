@@ -174,7 +174,6 @@ contains
                ! parent element is element on right
                pid = mshA%face(2,eid) 
                elemInfo(2,i) = pid
-               mshA%child(pid) = eid
                xp1=mshA%xe(1,pid) 
                xp2=mshA%xe(2,pid) 
                qA=mshA%q(1,:,pid) 
@@ -184,6 +183,7 @@ contains
                if(consoverset.eq.1) then 
                  ! Note we're adding to the parent element pid, not eid
                  xcut = [x1,x1+xfac*(y2-x1)]
+                 mshA%child(pid) = eid
                else
                  xcut = [x1,x1]
                  pid = eid
@@ -222,7 +222,6 @@ contains
                ! parent element is element on left
                pid = mshA%face(1,eid) 
                elemInfo(2,i) = pid
-               mshA%child(pid) = eid
                xp1=mshA%xe(1,pid)
                xp2=mshA%xe(2,pid)
                qA=mshA%q(1,:,pid) 
@@ -231,6 +230,7 @@ contains
                ! msh A will remove second half of overlap (from 0.5(y1+x2) to x2
                if(consoverset.eq.1) then 
                  xcut = [x2-xfac*(x2-y1),x2]
+                 mshA%child(pid) = eid
                else
                  xcut = [x2,x2]
                  pid = eid
