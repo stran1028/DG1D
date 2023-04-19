@@ -403,6 +403,7 @@ if(debug.eq.1) write(*,*) '  Total cut volflux: ',dvol,mshA%rhs(:,:,pid)
 !               if((consoverset.eq.1)) then 
                  pid = mshA%face(2,eid)
                  mshA%child(pid) = eid
+write(*,*) 'MERGING CELL ',eid,' AND ',pid
                else
                  pid = eid
                endif
@@ -433,6 +434,7 @@ if(debug.eq.1) write(*,*) '  Total cut volflux: ',dvol,mshA%rhs(:,:,pid)
 !               if((consoverset.eq.1)) then 
                  pid = mshA%face(1,eid)
                  mshA%child(pid) = eid
+write(*,*) 'MERGING CELL ',eid,' AND ',pid
                else
                  pid = eid
                endif
@@ -457,19 +459,21 @@ if(debug.eq.1) write(*,*) '  Total cut volflux: ',dvol,mshA%rhs(:,:,pid)
                
              ! Adjust mass matrix 
              if(consoverset.eq.1) then 
-               ! add additional mass over full child cell
-               do aa = 1,mshA%ngauss
-                 xg = mshA%xgauss(aa)*mshA%dx(eid)+0.5d0*(mshA%xe(1,eid)+mshA%xe(2,eid))
-                 wtmp = 1d0
-                 call shapefunction(mshA%nshp,xg,[xp1,xp2],wtmp,wtmp,dwtmp)
-                 do bb = 1,mshA%nshp
-                 do cc = 1,mshA%nshp
-                      index1 = (bb-1)*mshA%nshp+cc
-                      ! Fix mass matrix
-                      mshA%mass(:,index1,pid) = mshA%mass(:,index1,pid) + wtmp(bb)*wtmp(cc)*mshA%wgauss(aa)*mshA%dx(eid)
-                 enddo ! nshp
-                 enddo ! nshp
-               enddo ! ngauss
+               if(pid.ne.eid) then ! if agglomerated cell
+                 ! add additional mass over full child cell
+                 do aa = 1,mshA%ngauss
+                   xg = mshA%xgauss(aa)*mshA%dx(eid)+0.5d0*(mshA%xe(1,eid)+mshA%xe(2,eid))
+                   wtmp = 1d0
+                   call shapefunction(mshA%nshp,xg,[xp1,xp2],wtmp,wtmp,dwtmp)
+                   do bb = 1,mshA%nshp
+                     do cc = 1,mshA%nshp
+                       index1 = (bb-1)*mshA%nshp+cc
+                       ! Fix mass matrix
+                       mshA%mass(:,index1,pid) = mshA%mass(:,index1,pid) + wtmp(bb)*wtmp(cc)*mshA%wgauss(aa)*mshA%dx(eid)
+                     enddo ! nshp
+                   enddo ! nshp
+                 enddo ! ngauss
+               endif
 
                ! subtract child cell's cut portion
                lcut = xcut(2)-xcut(1)
