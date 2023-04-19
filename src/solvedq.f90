@@ -43,22 +43,9 @@ subroutine solveDQ(msh,dt,ireg)
 !      call matmat(AregT,Areg,A,msh%nshp,2*msh%nshp,msh%nshp)
 !      call matvec(AregT,breg,msh%nshp,2*msh%nshp,b)
 
-      !write(*,*) ' '
-      !write(*,*) 'eid ',i,msh%dxcut(i)/msh%dx(i),msh%dxcut(i),msh%dx(i)
-      !write(*,*) 'x ',msh%x(msh%e2n(:,i))
-      !write(*,*) 'iblank ',msh%iblank(:,i)
-      !write(*,*) 'mass0 ',msh%mass(1,:,i)
-      !write(*,*) 'rhs0 ',msh%rhs(1,:,i)
-      !write(*,*) 'mass1 ',A
-      !write(*,*) 'rhs1 ',b
-      !write(*,*) ' '
-
 !    else ! otherwise, do nothing
       A = msh%mass(1,:,i)
       b = msh%rhs(1,:,i)
-write(*,*) 'Elem ',i,msh%xe(:,i)
-write(*,*) '  Mass = ',msh%mass(1,:,i)
-write(*,*) '  RHS = ',msh%rhs(1,:,i)
 !    endif
 
     ! Solve Ax=b using LU decomp
@@ -68,8 +55,6 @@ write(*,*) '  RHS = ',msh%rhs(1,:,i)
       call forwprop(L,b,msh%nshp,y)
       call backprop(U,y,msh%nshp,msh%dq(1,:,i))
     endif
-!write(*,*)'  Update = ',msh%dq(1,:,i)
-write(*,*) ' '
   enddo
   !
 end subroutine solveDQ

@@ -179,7 +179,6 @@ contains
              yp1=mshB%xe(1,pidB)
              yp2=mshB%xe(2,pidB)
              qB=mshB%q(1,:,pidB)
-!write(*,*) 'mshB ',j,' parent:',pidB,yp1,yp2,qB
 
              if(mshA%dx(eid).lt.mshB%dx(j)) then ! A is fine mesh
                xfac = foverlap
@@ -315,8 +314,8 @@ contains
                  mshA%rhs(:,bb,pidA) = mshA%rhs(:,bb,pidA) + dwtmp(bb)*vol*(mshA%wgauss(aa)*fact) ! scale gauss weights by length of remaining element parent
 
                  dvol(bb) = dvol(bb) + dwtmp(bb)*vol*(mshA%wgauss(aa)*fact)
-if(debug.eq.1) write(*,*) 'Debug volflux:',pidA,bb,xg,dwtmp(bb),vol
-if(debug.eq.1) write(*,*) '    ',mshA%wgauss(aa),fact,dwtmp(bb)*vol*(mshA%wgauss(aa)*fact)
+                 if(debug.eq.1) write(*,*) 'Debug volflux:',pidA,bb,xg,dwtmp(bb),vol
+                 if(debug.eq.1) write(*,*) '    ',mshA%wgauss(aa),fact,dwtmp(bb)*vol*(mshA%wgauss(aa)*fact)
 
 !                 ! SUPG Terms
 !                 if(isupg.eq.1) then
@@ -345,7 +344,7 @@ if(debug.eq.1) write(*,*) '    ',mshA%wgauss(aa),fact,dwtmp(bb)*vol*(mshA%wgauss
 !                 endif ! supg
                enddo ! nshp
              enddo ! ngauss
-if(debug.eq.1) write(*,*) '  Total cut volflux: ',dvol,mshA%rhs(:,:,pidA)
+             if(debug.eq.1) write(*,*) '  Total cut volflux: ',dvol,mshA%rhs(:,:,pidA)
              cycle iloop
           endif
        enddo eloop
@@ -410,6 +409,7 @@ if(debug.eq.1) write(*,*) '  Total cut volflux: ',dvol,mshA%rhs(:,:,pidA)
                if(consoverset.eq.1) then 
                  elemInfo(2:3,i) = [xcut(2),x2]
                  mshA%dxcut(i) = x2-xcut(2)
+                 if(debug.eq.1) write(*,*) 'Elem ',i,'cut ratio = ',mshA%dxcut(i)/mshA%dx(i)
                else
                  elemInfo(2:3,i) = [x1,x2]
                endif
@@ -417,7 +417,7 @@ if(debug.eq.1) write(*,*) '  Total cut volflux: ',dvol,mshA%rhs(:,:,pidA)
 !               if((consoverset.eq.1)) then 
                  pidA = mshA%face(2,eid)
                  mshA%child(pidA) = eid
-write(*,*) 'MERGING CELL ',eid,' AND ',pidA
+                 if(debug.eq.1) write(*,*) 'MERGING CELL ',eid,' AND ',pidA
                else
                  pidA = eid
                endif
@@ -448,7 +448,7 @@ write(*,*) 'MERGING CELL ',eid,' AND ',pidA
 !               if((consoverset.eq.1)) then 
                  pidA = mshA%face(1,eid)
                  mshA%child(pidA) = eid
-write(*,*) 'MERGING CELL ',eid,' AND ',pidA
+                 if(debug.eq.1) write(*,*) 'MERGING CELL ',eid,' AND ',pidA
                else
                  pidA = eid
                endif
@@ -497,7 +497,6 @@ write(*,*) 'MERGING CELL ',eid,' AND ',pidA
                  xg = mshA%xgauss(aa)*lcut+xc
                  wtmp = 1d0
                  call shapefunction(mshA%nshp,xg,[xp1,xp2],wtmp,wtmp,dwtmp)
-!write(*,*) 'debug mass: xp1,xp2,xg,wtmp = ',xp1,xp2,xg,wtmp
                  do bb = 1,mshA%nshp
                  do cc = 1,mshA%nshp
                       index1 = (bb-1)*mshA%nshp+cc
@@ -507,8 +506,6 @@ write(*,*) 'MERGING CELL ',eid,' AND ',pidA
   
                  enddo ! nshp
                enddo ! ngauss
-!  write(*,*) ' '
-!  write(*,*) 'Mass 2: = ',eid,lcut/mshA%dx(eid),mshA%mass(1,:,eid)
              endif
              if(debug.eq.1) then
                write(*,*) '  Modified Mass:',mshA%mass(1,:,pidA)
@@ -575,8 +572,6 @@ write(*,*) 'MERGING CELL ',eid,' AND ',pidA
           do j = 1,msh%nshp
             ! compute q value at nodal point using parent element Q values
             xloc = msh%x(msh%e2n(j,eid))
-!write(*,*) 'projectChild = ',eid,msh%xe(:,eid)
-!write(*,*) '  ',xloc,xp1,xp2,qvals
             call shapefunction(msh%nshp,xloc,[xp1,xp2],vec(1,:,pid),qvals,dqvals)
             vec(1,j,eid) = SUM(qvals)
           enddo ! loop over shape functions

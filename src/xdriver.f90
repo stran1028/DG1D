@@ -34,7 +34,7 @@ program conservative_overset
   ieuler = 0
   do conswitch = 1,1    ! cons overset loop 
   do s = 1,1            ! shape function loop
-  do noverlap = 1,1     ! foverlap loop
+  do noverlap = 3,3     ! foverlap loop
   do order = 1,1      ! p-order loop
     sweep = 0d0
 
@@ -101,14 +101,14 @@ program conservative_overset
         m2start = -0.5 - dx(2)*.99
       endif
 
-      m2start = -0.5 - dx(2)*.95 !! stress test w/ 95% cut
+      m2start = -0.5 - dx(2)*.9999 !! stress test w/ 95% cut
 !      m2start = -0.5 - dx(2)*.5 !! stress test w/ 95% cut
 !       dx = [1d0,.5d0]
 !       m2start = 1.75d0
 
       ! Compute parameters
       dt=cfl*minval(dx)/ainf
-      ntime = 1 !1.*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
+      ntime = 1.*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
       write(*,*) ' '
       write(*,*) '    h, dx = ',h,dx
       write(*,*) '    m2start = ',m2start
@@ -158,7 +158,8 @@ program conservative_overset
       call computeMoments(msh(1),mom0(:,1),err(1),nincomp1,elemInfo1)
       call computeMoments(msh(2),mom0(:,2),err(2),nincomp2,elemInfo2)
 
-      write(*,*) 'Initial Area Under Curve: ', sum(mom0(1,:))
+      write(*,*) ' '
+      write(*,*) '    Initial Area Under Curve: ', sum(mom0(1,:))
 
       ! Iterate in time
       rk = [1d0/4d0, 8d0/15d0,5d0/12d0, 3d0/4d0];
@@ -176,8 +177,8 @@ program conservative_overset
           enddo
           ! Project solutions onto child cells from parent cells
           if((nmesh.gt.1).and.(consoverset.eq.1)) then
-             !call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%q)
-             !call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%q)
+             call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%q)
+             call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%q)
           endif
           if(ilim.eq.1) then 
             if(nmesh.gt.1) then 
@@ -203,10 +204,10 @@ program conservative_overset
           enddo
           ! Project solutions onto child cells from parent cells
           if((nmesh.gt.1).and.(consoverset.eq.1)) then
-             !call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%q)
-             !call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%sol)
-             !call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%q)
-             !call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%sol)
+             call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%q)
+             call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%sol)
+             call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%q)
+             call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%sol)
           endif
           if(ilim.eq.1) then
             if(nmesh.gt.1) then 
@@ -232,8 +233,8 @@ program conservative_overset
             msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
           enddo
           if((nmesh.gt.1).and.(consoverset.eq.1)) then
-             !call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%q)
-             !call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%q)
+             call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%q)
+             call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%q)
           endif
           if(ilim.eq.1) then
             if(nmesh.gt.1) then 
@@ -253,8 +254,8 @@ program conservative_overset
             msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
           enddo
           if((nmesh.gt.1).and.(consoverset.eq.1)) then
-             !call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%sol)
-             !call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%sol)
+             call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%sol)
+             call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%sol)
           endif
           if(ilim.eq.1) then
             if(nmesh.gt.1) then 
