@@ -56,10 +56,10 @@ subroutine solveDQ(msh,dt,ireg)
 !    else ! otherwise, do nothing
       A = msh%mass(1,:,i)
       b = msh%rhs(1,:,i)
-write(*,*) 'Elem ',i,msh%xe(:,i)
-write(*,*) '  Mass = ',msh%mass(1,:,i)
-write(*,*) '  RHS = ',msh%rhs(1,:,i)
-write(*,*) ' '
+!write(*,*) 'Elem ',i,msh%xe(:,i)
+!write(*,*) '  Mass = ',msh%mass(1,:,i)
+!write(*,*) '  RHS = ',msh%rhs(1,:,i)
+!write(*,*) ' '
 !    endif
 
     ! Solve Ax=b using LU decomp

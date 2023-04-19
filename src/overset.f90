@@ -393,17 +393,21 @@ if(debug.eq.1) write(*,*) '  Total cut volflux: ',dvol,mshA%rhs(:,:,pid)
                if(consoverset.eq.1) then 
                  elemInfo(3:4,i) = [xcut(2),x2]
                  mshA%dxcut(i) = x2-xcut(2)
+               else
+                 elemInfo(3:4,i) = [x1,x2]
+               endif
+               if((mshA%dxcut(i)/mshA%dx(i).le.0.1d0).and.(consoverset.eq.1)) then 
+!               if((consoverset.eq.1)) then 
                  pid = mshA%face(2,eid)
                  mshA%child(pid) = eid
                else
-                 elemInfo(3:4,i) = [x1,x2]
                  pid = eid
                endif
                elemInfo(2,i) = pid
                xp1=mshA%xe(1,pid)
                xp2=mshA%xe(2,pid)
                if(debug.eq.1) then
-                 write(*,*) 'R node inside mesh B:'
+                 write(*,*) 'L node inside mesh B:'
                  write(*,*) '  Mesh A elem:',eid,x1,x2
                  write(*,*) '  Mesh B elem:',y1,y2
                  write(*,*) '  xcut:',xcut(1),xcut(2)
@@ -418,17 +422,21 @@ if(debug.eq.1) write(*,*) '  Total cut volflux: ',dvol,mshA%rhs(:,:,pid)
                if(consoverset.eq.1) then 
                  elemInfo(3:4,i) = [x1,xcut(1)]
                  mshA%dxcut(i) = xcut(1)-x1
+               else
+                 elemInfo(3:4,i) = [x1,x2]
+               endif
+               if((mshA%dxcut(i)/mshA%dx(i).le.0.1d0).and.(consoverset.eq.1)) then 
+!               if((consoverset.eq.1)) then 
                  pid = mshA%face(1,eid)
                  mshA%child(pid) = eid
                else
-                 elemInfo(3:4,i) = [x1,x2]
                  pid = eid
                endif
                elemInfo(2,i) = pid
                xp1=mshA%xe(1,pid)
                xp2=mshA%xe(2,pid)
                if(debug.eq.1) then
-                 write(*,*) 'L node inside mesh B:'
+                 write(*,*) 'R node inside mesh B:'
                  write(*,*) '  Mesh A elem:',eid,x1,x2
                  write(*,*) '  Mesh B elem:',y1,y2
                  write(*,*) '  xcut:',xcut(1),xcut(2)
@@ -466,7 +474,7 @@ if(debug.eq.1) write(*,*) '  Total cut volflux: ',dvol,mshA%rhs(:,:,pid)
                  xg = mshA%xgauss(aa)*lcut+xc
                  wtmp = 1d0
                  call shapefunction(mshA%nshp,xg,[xp1,xp2],wtmp,wtmp,dwtmp)
-write(*,*) 'debug mass: xp1,xp2,xg,wtmp = ',xp1,xp2,xg,wtmp
+!write(*,*) 'debug mass: xp1,xp2,xg,wtmp = ',xp1,xp2,xg,wtmp
                  do bb = 1,mshA%nshp
                  do cc = 1,mshA%nshp
                       index1 = (bb-1)*mshA%nshp+cc
@@ -502,10 +510,13 @@ write(*,*) 'debug mass: xp1,xp2,xg,wtmp = ',xp1,xp2,xg,wtmp
 
     implicit none
     type(mesh),intent(inout) :: msh
-    integer :: i,j,eid,pid
+    integer :: i,j,k,eid,pid
     integer,intent(in) :: nincomp
+    real*8,dimension(msh%nshp*msh%nshp) :: L,U
     real*8, intent(in) :: elemInfo(4,nincomp)
+    real*8,dimension(msh%nshp) :: y
     real*8 :: x1,x2,xloc,qvals(msh%nshp),dqvals(msh%nshp),xp1,xp2
+    real*8 :: f(msh%nshp),dx,tmp
 
     do i = 1,nincomp
       eid = elemInfo(1,i)
@@ -513,21 +524,40 @@ write(*,*) 'debug mass: xp1,xp2,xg,wtmp = ',xp1,xp2,xg,wtmp
       xp1=msh%xe(1,pid)
       xp2=msh%xe(2,pid)
 
-      if(shptype.eq.'legendre') then 
-        write(*,*) 'Not coded yet XXX'
-        call exit(1)
-      else if(shptype.eq.'lagrange') then        
-        if(pid.ne.eid) then
+      if(pid.ne.eid) then
+        if(shptype.eq.'legendre') then 
+          ! Use projection to set the IC
+          ! int(NaNbub) = int(Na q_extrap)
+          ! ub = M^-1 int(Na q_extrap)
+          dx = msh%dx(eid)
+          f = 0.0d0
+          do j = 1,msh%ngauss
+            ! extrapolate q value based on parent bases
+            xloc = (msh%xgauss(j)+0.5d0)*dx + msh%xe(1,eid)
+            call shapefunction(msh%nshp,xloc,[xp1,xp2],msh%q(1,:,pid),qvals,dqvals)
+            tmp = SUM(qvals)
+            qvals = 1d0
+            call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],qvals,qvals,dqvals)
+            do k = 1,msh%nshp
+              f(k) = f(k) + msh%wgauss(j)*msh%dx(pid)*tmp*qvals(k)
+            enddo
+          enddo
+
+          ! solve the elementary system for u
+          call lu(msh%mass(1,:,pid),msh%nshp,L,U)
+          call forwprop(L,f,msh%nshp,y)
+          call backprop(U,y,msh%nshp,msh%q(1,:,eid))
+        else if(shptype.eq.'lagrange') then        
           do j = 1,msh%nshp
             ! compute q value at nodal point using parent element Q values
             xloc = msh%x(msh%e2n(j,eid))
-write(*,*) 'projectChild = ',eid,msh%xe(:,eid)
-write(*,*) '  ',xloc,xp1,xp2,qvals
+!write(*,*) 'projectChild = ',eid,msh%xe(:,eid)
+!write(*,*) '  ',xloc,xp1,xp2,qvals
             call shapefunction(msh%nshp,xloc,[xp1,xp2],msh%q(1,:,pid),qvals,dqvals)
             msh%q(1,j,eid) = SUM(qvals)
           enddo ! loop over shape functions
-        endif
-      endif ! shp type
+        endif ! shp type
+      endif ! if merged cell
     enddo ! loop over nincomp
   end subroutine projectChild
   !

@@ -31,7 +31,7 @@ program conservative_overset
   ilim = 0      ! flag to control slope limiting
   isupg = 0  ! supg flag
   ireg = 0 ! regularization flag
-  ieuler = 1
+  ieuler = 0
   do conswitch = 1,1    ! cons overset loop 
   do s = 1,1            ! shape function loop
   do noverlap = 1,1     ! foverlap loop
@@ -101,14 +101,14 @@ program conservative_overset
         m2start = -0.5 - dx(2)*.99
       endif
 
-    !  m2start = -0.5 - dx(2)*.95 !! stress test w/ 95% cut
+      m2start = -0.5 - dx(2)*.95 !! stress test w/ 95% cut
 !      m2start = -0.5 - dx(2)*.5 !! stress test w/ 95% cut
-       dx = [1d0,.5d0]
-       m2start = 1.75d0
+!       dx = [1d0,.5d0]
+!       m2start = 1.75d0
 
       ! Compute parameters
       dt=cfl*minval(dx)/ainf
-      ntime = 1 !1.25*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
+      ntime = 20 !1.25*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
       write(*,*) ' '
       write(*,*) '    h, dx = ',h,dx
       write(*,*) '    m2start = ',m2start
@@ -119,10 +119,10 @@ program conservative_overset
       write(*,*) '    ntime = ',ntime
       !
       ! Initialize the mesh(es)
-      call init_mesh(msh(1),[0d0,8d0],dx(1),1,order)
-      call init_mesh(msh(2),[m2start,m2start+2d0],dx(2),0,order)
-!      call init_mesh(msh(1),[-1d0,1d0],dx(1),1,order)
-!      call init_mesh(msh(2),[m2start,m2start+0.75d0],dx(2),0,order)
+!      call init_mesh(msh(1),[0d0,8d0],dx(1),1,order)
+!      call init_mesh(msh(2),[m2start,m2start+2d0],dx(2),0,order)
+      call init_mesh(msh(1),[-1d0,1d0],dx(1),1,order)
+      call init_mesh(msh(2),[m2start,m2start+0.75d0],dx(2),0,order)
 !      call init_mesh(msh(2),[-0.268d0,0.732d0],dx(2),0,order)
       !
       do n=1,nmesh
@@ -146,7 +146,7 @@ program conservative_overset
         debug = 0
         call fixMassIncompleteElements(msh(1),msh(2),elemInfo2,nincomp2,&
                 consoverset,foverlap,debug)
-        debug = 1
+        debug = 0
         call fixMassIncompleteElements(msh(2),msh(1),elemInfo1,nincomp1,&
                 consoverset,foverlap,debug)
       end if

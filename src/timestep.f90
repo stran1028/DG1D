@@ -21,7 +21,7 @@ subroutine timestep(nmesh,dt,msh,consoverset,elemInfo1,elemInfo2,nincomp1,nincom
       debug = 0
       call fixfluxIncompleteElements(msh(1),msh(2),elemInfo2,nincomp2,&
               consoverset,foverlap,isupg,dt,debug)
-      debug = 1
+      debug = 0
       call fixfluxIncompleteElements(msh(2),msh(1),elemInfo1,nincomp1,&
               consoverset,foverlap,isupg,dt,debug)
    end if
