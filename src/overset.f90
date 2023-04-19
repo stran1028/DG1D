@@ -226,7 +226,7 @@ contains
                  qR = sum(qtmp)
                  call flux(qL,qR,flx)
                  do k = 1,mshA%nshp
-                   mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) - wtmp(k)*flx
+                   mshA%rhs(:,k,pid) = mshA%rhs(:,k,pid) - wtmp(k)*flx
                  enddo
                endif
 
@@ -263,7 +263,7 @@ contains
                  qR = sum(qtmp)
                  call flux(qL,qR,flx)
                  do k = 1,mshA%nshp
-                   mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) + wtmp(k)*flx
+                   mshA%rhs(:,k,pid) = mshA%rhs(:,k,pid) + wtmp(k)*flx
                  enddo
                endif
 
@@ -514,13 +514,14 @@ write(*,*) 'MERGING CELL ',eid,' AND ',pid
      endif
   end subroutine fixMassIncompleteElements
   !
-  subroutine projectChild(msh,elemInfo,nincomp)
+  subroutine projectChild(msh,elemInfo,nincomp,vec)
     use bases
 
     implicit none
     type(mesh),intent(inout) :: msh
     integer :: i,j,k,eid,pid
     integer,intent(in) :: nincomp
+    real*8, intent(inout) :: vec(msh%nfields,msh%nshp,msh%nelem)
     real*8,dimension(msh%nshp*msh%nshp) :: L,U
     real*8, intent(in) :: elemInfo(4,nincomp)
     real*8,dimension(msh%nshp) :: y
@@ -543,7 +544,7 @@ write(*,*) 'MERGING CELL ',eid,' AND ',pid
           do j = 1,msh%ngauss
             ! extrapolate q value based on parent bases
             xloc = (msh%xgauss(j)+0.5d0)*dx + msh%xe(1,eid)
-            call shapefunction(msh%nshp,xloc,[xp1,xp2],msh%q(1,:,pid),qvals,dqvals)
+            call shapefunction(msh%nshp,xloc,[xp1,xp2],vec(1,:,pid),qvals,dqvals)
             tmp = SUM(qvals)
             qvals = 1d0
             call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],qvals,qvals,dqvals)
@@ -555,15 +556,15 @@ write(*,*) 'MERGING CELL ',eid,' AND ',pid
           ! solve the elementary system for u
           call lu(msh%mass(1,:,pid),msh%nshp,L,U)
           call forwprop(L,f,msh%nshp,y)
-          call backprop(U,y,msh%nshp,msh%q(1,:,eid))
+          call backprop(U,y,msh%nshp,vec(1,:,eid))
         else if(shptype.eq.'lagrange') then        
           do j = 1,msh%nshp
             ! compute q value at nodal point using parent element Q values
             xloc = msh%x(msh%e2n(j,eid))
 !write(*,*) 'projectChild = ',eid,msh%xe(:,eid)
 !write(*,*) '  ',xloc,xp1,xp2,qvals
-            call shapefunction(msh%nshp,xloc,[xp1,xp2],msh%q(1,:,pid),qvals,dqvals)
-            msh%q(1,j,eid) = SUM(qvals)
+            call shapefunction(msh%nshp,xloc,[xp1,xp2],vec(1,:,pid),qvals,dqvals)
+            vec(1,j,eid) = SUM(qvals)
           enddo ! loop over shape functions
         endif ! shp type
       endif ! if merged cell

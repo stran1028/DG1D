@@ -32,7 +32,7 @@ program conservative_overset
   isupg = 0  ! supg flag
   ireg = 0 ! regularization flag
   ieuler = 0
-  do conswitch = 0,0    ! cons overset loop 
+  do conswitch = 1,1    ! cons overset loop 
   do s = 1,1            ! shape function loop
   do noverlap = 1,1     ! foverlap loop
   do order = 1,1      ! p-order loop
@@ -108,7 +108,7 @@ program conservative_overset
 
       ! Compute parameters
       dt=cfl*minval(dx)/ainf
-      ntime = 20 !1.25*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
+      ntime = 2 !1.*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
       write(*,*) ' '
       write(*,*) '    h, dx = ',h,dx
       write(*,*) '    m2start = ',m2start
@@ -174,6 +174,11 @@ program conservative_overset
             msh(j)%q=msh(j)%q+dt*msh(j)%dq
             msh(j)%sol=msh(j)%q
           enddo
+          ! Project solutions onto child cells from parent cells
+          if((nmesh.gt.1).and.(consoverset.eq.1)) then
+             call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%q)
+             call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%q)
+          endif
           if(ilim.eq.1) then 
             if(nmesh.gt.1) then 
               write(*,*) 'Limiting Grid 1...'
@@ -196,6 +201,13 @@ program conservative_overset
             msh(j)%q=msh(j)%sol+rk(2)*dt*msh(j)%dq
             msh(j)%sol=msh(j)%sol+rk(1)*dt*msh(j)%dq
           enddo
+          ! Project solutions onto child cells from parent cells
+          if((nmesh.gt.1).and.(consoverset.eq.1)) then
+             call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%q)
+             call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%sol)
+             call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%q)
+             call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%sol)
+          endif
           if(ilim.eq.1) then
             if(nmesh.gt.1) then 
               call genLimit2(msh(1)%q,msh(1)%vlim,msh(1),msh(2))
@@ -219,6 +231,10 @@ program conservative_overset
           do j = 1,nmesh
             msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
           enddo
+          if((nmesh.gt.1).and.(consoverset.eq.1)) then
+             call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%q)
+             call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%q)
+          endif
           if(ilim.eq.1) then
             if(nmesh.gt.1) then 
               call genLimit2(msh(1)%q,msh(1)%vlim,msh(1),msh(2))
@@ -236,6 +252,10 @@ program conservative_overset
           do j = 1,nmesh
             msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
           enddo
+          if((nmesh.gt.1).and.(consoverset.eq.1)) then
+             call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%sol)
+             call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%sol)
+          endif
           if(ilim.eq.1) then
             if(nmesh.gt.1) then 
               call genLimit2(msh(1)%sol,msh(1)%vlim,msh(1),msh(2))
