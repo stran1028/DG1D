@@ -108,7 +108,7 @@ program conservative_overset
 
       ! Compute parameters
       dt=cfl*minval(dx)/ainf
-      ntime = 2 !1.*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
+      ntime = 1 !1.*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
       write(*,*) ' '
       write(*,*) '    h, dx = ',h,dx
       write(*,*) '    m2start = ',m2start
@@ -176,8 +176,8 @@ program conservative_overset
           enddo
           ! Project solutions onto child cells from parent cells
           if((nmesh.gt.1).and.(consoverset.eq.1)) then
-             call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%q)
-             call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%q)
+             !call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%q)
+             !call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%q)
           endif
           if(ilim.eq.1) then 
             if(nmesh.gt.1) then 
@@ -203,10 +203,10 @@ program conservative_overset
           enddo
           ! Project solutions onto child cells from parent cells
           if((nmesh.gt.1).and.(consoverset.eq.1)) then
-             call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%q)
-             call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%sol)
-             call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%q)
-             call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%sol)
+             !call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%q)
+             !call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%sol)
+             !call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%q)
+             !call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%sol)
           endif
           if(ilim.eq.1) then
             if(nmesh.gt.1) then 
@@ -232,8 +232,8 @@ program conservative_overset
             msh(j)%q=msh(j)%sol+rk(3)*dt*msh(j)%dq
           enddo
           if((nmesh.gt.1).and.(consoverset.eq.1)) then
-             call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%q)
-             call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%q)
+             !call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%q)
+             !call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%q)
           endif
           if(ilim.eq.1) then
             if(nmesh.gt.1) then 
@@ -253,8 +253,8 @@ program conservative_overset
             msh(j)%sol=msh(j)%sol+rk(4)*dt*msh(j)%dq
           enddo
           if((nmesh.gt.1).and.(consoverset.eq.1)) then
-             call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%sol)
-             call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%sol)
+             !call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%sol)
+             !call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%sol)
           endif
           if(ilim.eq.1) then
             if(nmesh.gt.1) then 

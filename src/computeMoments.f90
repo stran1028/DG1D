@@ -6,7 +6,7 @@ subroutine computeMoments(msh,moments,error,nincomp,elemInfo)
  !
  implicit none
  integer,intent(in) :: nincomp
- real*8,intent(in) :: elemInfo(4,nincomp)
+ real*8,intent(in) :: elemInfo(3,nincomp)
  type(mesh), intent(inout) :: msh
  real*8, intent(inout) :: moments(2)
  integer :: i,j,k,ndof,eid
@@ -43,8 +43,8 @@ subroutine computeMoments(msh,moments,error,nincomp,elemInfo)
  do i = 1,nincomp
      ! Get the modified element size
      eid = elemInfo(1,i)
-     dxmod = elemInfo(4,i)-elemInfo(3,i)
-     xc = 0.5d0*(elemInfo(4,i)+elemInfo(3,i))
+     dxmod = elemInfo(3,i)-elemInfo(2,i)
+     xc = 0.5d0*(elemInfo(3,i)+elemInfo(2,i))
 
      ! adjust gauss points to modified element
      ndof = ndof + msh%nshp

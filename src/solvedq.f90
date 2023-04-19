@@ -59,17 +59,17 @@ subroutine solveDQ(msh,dt,ireg)
 write(*,*) 'Elem ',i,msh%xe(:,i)
 write(*,*) '  Mass = ',msh%mass(1,:,i)
 write(*,*) '  RHS = ',msh%rhs(1,:,i)
-write(*,*) ' '
 !    endif
 
     ! Solve Ax=b using LU decomp
     ! skip cut elements, those are handled by their parents
-    if(msh%dxcut(i).eq.msh%dx(i)) then 
+    if(msh%parent(i).eq.i) then 
       call lu(A,msh%nshp,L,U)
       call forwprop(L,b,msh%nshp,y)
       call backprop(U,y,msh%nshp,msh%dq(1,:,i))
     endif
-
+!write(*,*)'  Update = ',msh%dq(1,:,i)
+write(*,*) ' '
   enddo
   !
 end subroutine solveDQ

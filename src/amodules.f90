@@ -14,6 +14,7 @@ module code_types
      integer, allocatable :: face(:,:) !< element end-faces
      integer, allocatable :: iblank(:,:) !< iblank for end-nodes
      integer, allocatable :: child(:) !< child element ID 
+     integer, allocatable :: parent(:) !< parent element ID 
      !
      real*8, allocatable :: dq(:,:,:)   !< q-variables (nfields,nshp,nelem)
      real*8, allocatable :: q0(:,:,:)   !< intermediate q-variables (nfields,nshp,nelem)

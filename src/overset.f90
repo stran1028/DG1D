@@ -116,7 +116,7 @@ contains
     ! store info on the incomplete elems
     ! modified for DG, need both q endpts 
     ! and rhs vector
-    allocate(elemInfo(4,nincomp))
+    allocate(elemInfo(3,nincomp))
     k = 1
     do i=1,msh%nelem
        ib1=msh%iblank(1,i)
@@ -136,11 +136,11 @@ contains
     implicit none
     type(mesh), intent(inout) :: mshA,mshB
     integer, intent(in) :: nincomp,consoverset,isupg,debug
-    real*8, intent(inout) :: elemInfo(4,nincomp),foverlap
+    real*8, intent(inout) :: elemInfo(3,nincomp),foverlap
     real*8, intent(in) :: dt
     !
-    integer :: i,j,k,e,nrows,aa,bb,cc,eid,neigh,id,pid
-    real*8 :: x1,x2,xp1,xp2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp)
+    integer :: i,j,k,e,nrows,aa,bb,cc,eid,neigh,id,pidA,pidB
+    real*8 :: x1,x2,xp1,xp2,f1,f2,y1,y2,yp1,yp2,qA(mshA%nshp),qB(mshB%nshp)
     real*8 :: xrem(2),xcut(2),xc,lcut,xg,vol,flx,qL,qR,fact,xfac
     real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp),tmp
     real*8 ::qtmp(mshA%nshp),dqtmp(mshA%nshp),dq,dvol(mshA%nshp),dflx(mshA%nshp)
@@ -156,6 +156,12 @@ contains
        write(*,*) 'Entering fixFluxIncompleteElements'
        write(*,*) '--------------------------------------'
        write(*,*) ' '
+       do i=1,mshA%nelem 
+        write(*,*) 'A Parents: ',i,mshA%parent(i)
+       enddo
+       do i=1,mshB%nelem 
+        write(*,*) 'B Parents: ',i,mshB%parent(i)
+       enddo
      endif
      iloop: do i=1,nincomp       ! Loop through incomplete elem of mesh A
        eid = elemInfo(1,i)
@@ -169,7 +175,11 @@ contains
           else
 	     if (mshB%iblank(1,j) .ne.1 .and. &
                  mshB%iblank(2,j) .ne.1) cycle eloop ! skip if element blanked
-             qB=mshB%q(1,:,j)
+             pidB = mshB%parent(j)
+             yp1=mshB%xe(1,pidB)
+             yp2=mshB%xe(2,pidB)
+             qB=mshB%q(1,:,pidB)
+!write(*,*) 'mshB ',j,' parent:',pidB,yp1,yp2,qB
 
              if(mshA%dx(eid).lt.mshB%dx(j)) then ! A is fine mesh
                xfac = foverlap
@@ -186,18 +196,19 @@ contains
                  xcut = [x1,x1+xfac*(y2-x1)]
                else
                  xcut = [x1,x1]
+                 if(debug.eq.1) write(*,*) 'XCUT = ',xcut,xfac,x1,x2,y1,y2
                endif
-               xrem = elemInfo(3:4,i)
-               pid = elemInfo(2,i)
-               qA=mshA%q(1,:,pid) 
-               xp1=mshA%xe(1,pid) 
-               xp2=mshA%xe(2,pid) 
+               xrem = elemInfo(2:3,i)
+               pidA = mshA%parent(eid)
+               qA=mshA%q(1,:,pidA) 
+               xp1=mshA%xe(1,pidA) 
+               xp2=mshA%xe(2,pidA) 
                if(debug.eq.1) then
                  write(*,*) 'L node inside mesh B:'
                  write(*,*) '  Mesh A elem:',eid,x1,x2
                  write(*,*) '  Mesh B elem:',y1,y2
                  write(*,*) '  ElemInfo:',elemInfo(:,i)
-                 write(*,*) '  Parent:',pid,xp1,xp2,qA
+                 write(*,*) '  Parent:',pidA,xp1,xp2,qA
                  write(*,*) '  Parent Na, qA= ',wtmp
                  write(*,*) ' ' 
                endif
@@ -205,17 +216,17 @@ contains
                ! add intermesh flux from mesh B interior to mesh A L node
                wtmp = 1d0
                call shapefunction(mshA%nshp,xcut(2),[xp1,xp2],wtmp,wtmp,dwtmp)
-               call shapefunction(mshB%nshp,xcut(2),[y1,y2],qB,qtmp,dqtmp)
+               call shapefunction(mshB%nshp,xcut(2),[yp1,yp2],qB,qtmp,dqtmp)
                qL = sum(qtmp)
                call shapefunction(mshA%nshp,xcut(2),[xp1,xp2],qA,qtmp,dqtmp)
                qR = sum(qtmp)
                call flux(qL,qR,flx)
                do k = 1,mshA%nshp
-                 mshA%rhs(:,k,pid) = mshA%rhs(:,k,pid) + wtmp(k)*flx
+                 mshA%rhs(:,k,pidA) = mshA%rhs(:,k,pidA) + wtmp(k)*flx
                enddo
-               if(debug.eq.1) write(*,*) 'L Debug fflux: ',wtmp*flx
+               if(debug.eq.1) write(*,*) 'L Debug fflux 1: ',xcut(2),wtmp,qL,qR,flx
 
-               if(pid.eq.eid) then ! only do if not using cell agglomeration
+               if(pidA.eq.eid) then ! only do if not using cell agglomeration
                  ! Handle mesh A R node flux
                  wtmp = 1d0
                  call shapefunction(mshA%nshp,x2,[x1,x2],wtmp,wtmp,dwtmp)
@@ -226,8 +237,9 @@ contains
                  qR = sum(qtmp)
                  call flux(qL,qR,flx)
                  do k = 1,mshA%nshp
-                   mshA%rhs(:,k,pid) = mshA%rhs(:,k,pid) - wtmp(k)*flx
+                   mshA%rhs(:,k,pidA) = mshA%rhs(:,k,pidA) - wtmp(k)*flx
                  enddo
+                 if(debug.eq.1) write(*,*) 'R Debug fflux 2: ',x2,wtmp,qL,qR,flx
                endif
 
              elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem          
@@ -235,24 +247,25 @@ contains
                ! msh A will remove second half of overlap (from 0.5(y1+x2) to x2
                if(consoverset.eq.1) then 
                  xcut = [x2-xfac*(x2-y1),x2]
+                 if(debug.eq.1) write(*,*) 'XCUT = ',xcut,xfac,x1,x2,y1,y2
                else
                  xcut = [x2,x2]
                endif
-               xrem = elemInfo(3:4,i)
-               pid = elemInfo(2,i)
-               qA=mshA%q(1,:,pid) 
-               xp1=mshA%xe(1,pid)
-               xp2=mshA%xe(2,pid)
+               xrem = elemInfo(2:3,i)
+               pidA = mshA%parent(eid)
+               qA=mshA%q(1,:,pidA) 
+               xp1=mshA%xe(1,pidA)
+               xp2=mshA%xe(2,pidA)
                if(debug.eq.1) then
                  write(*,*) 'R node inside mesh B:'
                  write(*,*) '  Mesh A elem:',eid,x1,x2
                  write(*,*) '  Mesh B elem:',y1,y2
                  write(*,*) '  ElemInfo:',elemInfo(:,i)
-                 write(*,*) '  Parent:',pid,xp1,xp2,qA
+                 write(*,*) '  Parent:',pidA,xp1,xp2,qA
                  write(*,*) ' ' 
                endif
 
-               if(pid.eq.eid) then ! only do if not using cell agglomeration
+               if(pidA.eq.eid) then ! only do if not using cell agglomeration
                  ! Handle mesh A L node flux 
                  wtmp = 1d0
                  call shapefunction(mshA%nshp,x1,[x1,x2],wtmp,wtmp,dwtmp)
@@ -263,12 +276,13 @@ contains
                  qR = sum(qtmp)
                  call flux(qL,qR,flx)
                  do k = 1,mshA%nshp
-                   mshA%rhs(:,k,pid) = mshA%rhs(:,k,pid) + wtmp(k)*flx
+                   mshA%rhs(:,k,pidA) = mshA%rhs(:,k,pidA) + wtmp(k)*flx
                  enddo
+                 if(debug.eq.1)  write(*,*) 'L Debug fflux 3: ',x1,wtmp,qL,qR,flx
                endif
 
                ! add intermesh flux from mesh B interior to mesh A R node
-               ! Note we're adding to the parent element pid, not eid
+               ! Note we're adding to the parent element pidA, not eid
                wtmp = 1d0
                call shapefunction(mshA%nshp,xcut(1),[xp1,xp2],wtmp,wtmp,dwtmp)
                call shapefunction(mshB%nshp,xcut(1),[y1,y2],qB,qtmp,dqtmp)
@@ -277,9 +291,9 @@ contains
                qL = sum(qtmp)
                call flux(ql,qr,flx)
                do k = 1,mshA%nshp
-                 mshA%rhs(:,k,pid) = mshA%rhs(:,k,pid) - wtmp(k)*flx
+                 mshA%rhs(:,k,pidA) = mshA%rhs(:,k,pidA) - wtmp(k)*flx
                enddo
-               if(debug.eq.1) write(*,*) 'R Debug fflux: ',wtmp*flx
+               if(debug.eq.1)  write(*,*) 'R Debug fflux 4: ',xcut(1),wtmp,qL,qR,flx
 
              endif
              fact = (xrem(2)-xrem(1))/(x2-x1)
@@ -294,14 +308,14 @@ contains
                call shapefunction(mshA%nshp,xg,[xp1,xp2],wtmp,wtmp,dwtmp)
                call shapefunction(mshA%nshp,xg,[xp1,xp2],qA,qtmp,dqtmp)
                qval = sum(qtmp)
-               dqval = sum(dqtmp)/mshA%dx(pid)
+               dqval = sum(dqtmp)/mshA%dx(pidA)
                call volint(qval,vol)
                do bb = 1,mshA%nshp
                  ! Volume Integral
-                 mshA%rhs(:,bb,pid) = mshA%rhs(:,bb,pid) + dwtmp(bb)*vol*(mshA%wgauss(aa)*fact) ! scale gauss weights by length of remaining element parent
+                 mshA%rhs(:,bb,pidA) = mshA%rhs(:,bb,pidA) + dwtmp(bb)*vol*(mshA%wgauss(aa)*fact) ! scale gauss weights by length of remaining element parent
 
                  dvol(bb) = dvol(bb) + dwtmp(bb)*vol*(mshA%wgauss(aa)*fact)
-if(debug.eq.1) write(*,*) 'Debug volflux:',pid,bb,xg,dwtmp(bb),vol
+if(debug.eq.1) write(*,*) 'Debug volflux:',pidA,bb,xg,dwtmp(bb),vol
 if(debug.eq.1) write(*,*) '    ',mshA%wgauss(aa),fact,dwtmp(bb)*vol*(mshA%wgauss(aa)*fact)
 
 !                 ! SUPG Terms
@@ -331,7 +345,7 @@ if(debug.eq.1) write(*,*) '    ',mshA%wgauss(aa),fact,dwtmp(bb)*vol*(mshA%wgauss
 !                 endif ! supg
                enddo ! nshp
              enddo ! ngauss
-if(debug.eq.1) write(*,*) '  Total cut volflux: ',dvol,mshA%rhs(:,:,pid)
+if(debug.eq.1) write(*,*) '  Total cut volflux: ',dvol,mshA%rhs(:,:,pidA)
              cycle iloop
           endif
        enddo eloop
@@ -352,9 +366,9 @@ if(debug.eq.1) write(*,*) '  Total cut volflux: ',dvol,mshA%rhs(:,:,pid)
     implicit none
     type(mesh), intent(inout) :: mshA,mshB
     integer, intent(in) :: nincomp,consoverset,debug
-    real*8, intent(inout) :: elemInfo(4,nincomp),foverlap
+    real*8, intent(inout) :: elemInfo(3,nincomp),foverlap
     !
-    integer :: i,j,k,e,nrows,aa,bb,cc,eid,index1,pid
+    integer :: i,j,k,e,nrows,aa,bb,cc,eid,index1,pidA
     real*8 :: x1,x2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp),xp1,xp2
     real*8 :: xcut(2),xc,lcut,xg,xfac
     real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp)
@@ -394,30 +408,30 @@ if(debug.eq.1) write(*,*) '  Total cut volflux: ',dvol,mshA%rhs(:,:,pid)
                ! mshA will remove first half of overlap (from x1 to 0.5*(x1+y2))
                xcut = [x1,x1+xfac*(y2-x1)]
                if(consoverset.eq.1) then 
-                 elemInfo(3:4,i) = [xcut(2),x2]
+                 elemInfo(2:3,i) = [xcut(2),x2]
                  mshA%dxcut(i) = x2-xcut(2)
                else
-                 elemInfo(3:4,i) = [x1,x2]
+                 elemInfo(2:3,i) = [x1,x2]
                endif
                if((mshA%dxcut(i)/mshA%dx(i).le.0.1d0).and.(consoverset.eq.1)) then 
 !               if((consoverset.eq.1)) then 
-                 pid = mshA%face(2,eid)
-                 mshA%child(pid) = eid
-write(*,*) 'MERGING CELL ',eid,' AND ',pid
+                 pidA = mshA%face(2,eid)
+                 mshA%child(pidA) = eid
+write(*,*) 'MERGING CELL ',eid,' AND ',pidA
                else
-                 pid = eid
+                 pidA = eid
                endif
-               elemInfo(2,i) = pid
-               xp1=mshA%xe(1,pid)
-               xp2=mshA%xe(2,pid)
+               mshA%parent(eid) = pidA
+               xp1=mshA%xe(1,pidA)
+               xp2=mshA%xe(2,pidA)
                if(debug.eq.1) then
                  write(*,*) 'L node inside mesh B:'
                  write(*,*) '  Mesh A elem:',eid,x1,x2
                  write(*,*) '  Mesh B elem:',y1,y2
                  write(*,*) '  xcut:',xcut(1),xcut(2)
                  write(*,*) '  ElemInfo:',elemInfo(:,i)
-                 write(*,*) '  Parent:',pid,xp1,xp2
-                 write(*,*) '  Parents Child:',mshA%child(pid)
+                 write(*,*) '  Parent:',pidA,xp1,xp2
+                 write(*,*) '  Parents Child:',mshA%child(pidA)
                  write(*,*) ' ' 
                endif
              elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem          
@@ -425,41 +439,41 @@ write(*,*) 'MERGING CELL ',eid,' AND ',pid
                ! msh A will remove second half of overlap (from 0.5(y1+x2) to x2
                xcut = [x2-xfac*(x2-y1),x2]
                if(consoverset.eq.1) then 
-                 elemInfo(3:4,i) = [x1,xcut(1)]
+                 elemInfo(2:3,i) = [x1,xcut(1)]
                  mshA%dxcut(i) = xcut(1)-x1
                else
-                 elemInfo(3:4,i) = [x1,x2]
+                 elemInfo(2:3,i) = [x1,x2]
                endif
                if((mshA%dxcut(i)/mshA%dx(i).le.0.1d0).and.(consoverset.eq.1)) then 
 !               if((consoverset.eq.1)) then 
-                 pid = mshA%face(1,eid)
-                 mshA%child(pid) = eid
-write(*,*) 'MERGING CELL ',eid,' AND ',pid
+                 pidA = mshA%face(1,eid)
+                 mshA%child(pidA) = eid
+write(*,*) 'MERGING CELL ',eid,' AND ',pidA
                else
-                 pid = eid
+                 pidA = eid
                endif
-               elemInfo(2,i) = pid
-               xp1=mshA%xe(1,pid)
-               xp2=mshA%xe(2,pid)
+               mshA%parent(eid) = pidA
+               xp1=mshA%xe(1,pidA)
+               xp2=mshA%xe(2,pidA)
                if(debug.eq.1) then
                  write(*,*) 'R node inside mesh B:'
                  write(*,*) '  Mesh A elem:',eid,x1,x2
                  write(*,*) '  Mesh B elem:',y1,y2
                  write(*,*) '  xcut:',xcut(1),xcut(2)
                  write(*,*) '  ElemInfo:',elemInfo(:,i)
-                 write(*,*) '  Parent:',pid,xp1,xp2
-                 write(*,*) '  Parents Child:',mshA%child(pid)
+                 write(*,*) '  Parent:',pidA,xp1,xp2
+                 write(*,*) '  Parents Child:',mshA%child(pidA)
                  write(*,*) ' ' 
                endif
              endif ! L or R side
              if(debug.eq.1) then
-               write(*,*) '  Original Mass:',mshA%mass(1,:,pid)
+               write(*,*) '  Original Mass:',mshA%mass(1,:,pidA)
                write(*,*) ' ' 
              endif
                
              ! Adjust mass matrix 
              if(consoverset.eq.1) then 
-               if(pid.ne.eid) then ! if agglomerated cell
+               if(pidA.ne.eid) then ! if agglomerated cell
                  ! add additional mass over full child cell
                  do aa = 1,mshA%ngauss
                    xg = mshA%xgauss(aa)*mshA%dx(eid)+0.5d0*(mshA%xe(1,eid)+mshA%xe(2,eid))
@@ -469,7 +483,7 @@ write(*,*) 'MERGING CELL ',eid,' AND ',pid
                      do cc = 1,mshA%nshp
                        index1 = (bb-1)*mshA%nshp+cc
                        ! Fix mass matrix
-                       mshA%mass(:,index1,pid) = mshA%mass(:,index1,pid) + wtmp(bb)*wtmp(cc)*mshA%wgauss(aa)*mshA%dx(eid)
+                       mshA%mass(:,index1,pidA) = mshA%mass(:,index1,pidA) + wtmp(bb)*wtmp(cc)*mshA%wgauss(aa)*mshA%dx(eid)
                      enddo ! nshp
                    enddo ! nshp
                  enddo ! ngauss
@@ -488,7 +502,7 @@ write(*,*) 'MERGING CELL ',eid,' AND ',pid
                  do cc = 1,mshA%nshp
                       index1 = (bb-1)*mshA%nshp+cc
                       ! Fix mass matrix
-                      mshA%mass(:,index1,pid) = mshA%mass(:,index1,pid) - wtmp(bb)*wtmp(cc)*mshA%wgauss(aa)*lcut
+                      mshA%mass(:,index1,pidA) = mshA%mass(:,index1,pidA) - wtmp(bb)*wtmp(cc)*mshA%wgauss(aa)*lcut
                  enddo ! nshp
   
                  enddo ! nshp
@@ -497,7 +511,7 @@ write(*,*) 'MERGING CELL ',eid,' AND ',pid
 !  write(*,*) 'Mass 2: = ',eid,lcut/mshA%dx(eid),mshA%mass(1,:,eid)
              endif
              if(debug.eq.1) then
-               write(*,*) '  Modified Mass:',mshA%mass(1,:,pid)
+               write(*,*) '  Modified Mass:',mshA%mass(1,:,pidA)
                write(*,*) ' ' 
              endif
 
@@ -523,14 +537,14 @@ write(*,*) 'MERGING CELL ',eid,' AND ',pid
     integer,intent(in) :: nincomp
     real*8, intent(inout) :: vec(msh%nfields,msh%nshp,msh%nelem)
     real*8,dimension(msh%nshp*msh%nshp) :: L,U
-    real*8, intent(in) :: elemInfo(4,nincomp)
+    real*8, intent(in) :: elemInfo(3,nincomp)
     real*8,dimension(msh%nshp) :: y
     real*8 :: x1,x2,xloc,qvals(msh%nshp),dqvals(msh%nshp),xp1,xp2
     real*8 :: f(msh%nshp),dx,tmp
 
     do i = 1,nincomp
       eid = elemInfo(1,i)
-      pid = elemInfo(2,i)
+      pid = msh%parent(eid)
       xp1=msh%xe(1,pid)
       xp2=msh%xe(2,pid)
 

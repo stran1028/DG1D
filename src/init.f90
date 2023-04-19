@@ -108,8 +108,10 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   enddo
   !
   allocate(msh%child(msh%nelem))
+  allocate(msh%parent(msh%nelem))
   do i=1,msh%nelem
     msh%child(i) = i
+    msh%parent(i) = i
   enddo
   !
   msh%nfaces=msh%nelem
