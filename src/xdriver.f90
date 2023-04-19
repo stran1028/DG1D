@@ -32,7 +32,7 @@ program conservative_overset
   isupg = 0  ! supg flag
   ireg = 0 ! regularization flag
   ieuler = 0
-  do conswitch = 1,1    ! cons overset loop 
+  do conswitch = 0,0    ! cons overset loop 
   do s = 1,1            ! shape function loop
   do noverlap = 1,1     ! foverlap loop
   do order = 1,1      ! p-order loop

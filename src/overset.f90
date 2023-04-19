@@ -214,19 +214,21 @@ contains
                  mshA%rhs(:,k,pid) = mshA%rhs(:,k,pid) + wtmp(k)*flx
                enddo
                if(debug.eq.1) write(*,*) 'L Debug fflux: ',wtmp*flx
-!!! Don't need to do this anymore
-!               ! Handle mesh A R node flux
-!               wtmp = 1d0
-!               call shapefunction(mshA%nshp,x2,[x1,x2],wtmp,wtmp,dwtmp)
-!               neigh = mshA%face(2,eid)
-!               call shapefunction(mshA%nshp,x2,[xp1,xp2],qA,qtmp,dqtmp)
-!               qL = sum(qtmp)
-!               call shapefunction(mshA%nshp,x2,mshA%xe(:,neigh),mshA%q(1,:,neigh),qtmp,dqtmp)
-!               qR = sum(qtmp)
-!               call flux(qL,qR,flx)
-!               do k = 1,mshA%nshp
-!                 mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) - wtmp(k)*flx
-!               enddo
+
+               if(pid.eq.eid) then ! only do if not using cell agglomeration
+                 ! Handle mesh A R node flux
+                 wtmp = 1d0
+                 call shapefunction(mshA%nshp,x2,[x1,x2],wtmp,wtmp,dwtmp)
+                 neigh = mshA%face(2,eid)
+                 call shapefunction(mshA%nshp,x2,[xp1,xp2],qA,qtmp,dqtmp)
+                 qL = sum(qtmp)
+                 call shapefunction(mshA%nshp,x2,mshA%xe(:,neigh),mshA%q(1,:,neigh),qtmp,dqtmp)
+                 qR = sum(qtmp)
+                 call flux(qL,qR,flx)
+                 do k = 1,mshA%nshp
+                   mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) - wtmp(k)*flx
+                 enddo
+               endif
 
              elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem          
                ! Overlap is between y1 and x2
@@ -250,19 +252,20 @@ contains
                  write(*,*) ' ' 
                endif
 
-!!! Don't need to do this anymore
-!               ! Handle mesh A L node flux 
-!               wtmp = 1d0
-!               call shapefunction(mshA%nshp,x1,[x1,x2],wtmp,wtmp,dwtmp)
-!               neigh = mshA%face(1,eid)
-!               call shapefunction(mshA%nshp,x1,mshA%xe(:,neigh),mshA%q(1,:,neigh),qtmp,dqtmp)
-!               qL = sum(qtmp)
-!               call shapefunction(mshA%nshp,x1,[x1,x2],qA,qtmp,dqtmp)
-!               qR = sum(qtmp)
-!               call flux(qL,qR,flx)
-!               do k = 1,mshA%nshp
-!                 mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) + wtmp(k)*flx
-!               enddo
+               if(pid.eq.eid) then ! only do if not using cell agglomeration
+                 ! Handle mesh A L node flux 
+                 wtmp = 1d0
+                 call shapefunction(mshA%nshp,x1,[x1,x2],wtmp,wtmp,dwtmp)
+                 neigh = mshA%face(1,eid)
+                 call shapefunction(mshA%nshp,x1,mshA%xe(:,neigh),mshA%q(1,:,neigh),qtmp,dqtmp)
+                 qL = sum(qtmp)
+                 call shapefunction(mshA%nshp,x1,[x1,x2],qA,qtmp,dqtmp)
+                 qR = sum(qtmp)
+                 call flux(qL,qR,flx)
+                 do k = 1,mshA%nshp
+                   mshA%rhs(:,k,eid) = mshA%rhs(:,k,eid) + wtmp(k)*flx
+                 enddo
+               endif
 
                ! add intermesh flux from mesh B interior to mesh A R node
                ! Note we're adding to the parent element pid, not eid
@@ -413,6 +416,7 @@ if(debug.eq.1) write(*,*) '  Total cut volflux: ',dvol,mshA%rhs(:,:,pid)
                  write(*,*) '  xcut:',xcut(1),xcut(2)
                  write(*,*) '  ElemInfo:',elemInfo(:,i)
                  write(*,*) '  Parent:',pid,xp1,xp2
+                 write(*,*) '  Parents Child:',mshA%child(pid)
                  write(*,*) ' ' 
                endif
              elseif ((x2-y1)*(x2-y2) .le. 0.0) then ! R node of mesh A is inside of mesh B elem          
@@ -442,6 +446,7 @@ if(debug.eq.1) write(*,*) '  Total cut volflux: ',dvol,mshA%rhs(:,:,pid)
                  write(*,*) '  xcut:',xcut(1),xcut(2)
                  write(*,*) '  ElemInfo:',elemInfo(:,i)
                  write(*,*) '  Parent:',pid,xp1,xp2
+                 write(*,*) '  Parents Child:',mshA%child(pid)
                  write(*,*) ' ' 
                endif
              endif ! L or R side
@@ -486,10 +491,10 @@ if(debug.eq.1) write(*,*) '  Total cut volflux: ',dvol,mshA%rhs(:,:,pid)
                enddo ! ngauss
 !  write(*,*) ' '
 !  write(*,*) 'Mass 2: = ',eid,lcut/mshA%dx(eid),mshA%mass(1,:,eid)
-               if(debug.eq.1) then
-                 write(*,*) '  Modified Mass:',mshA%mass(1,:,pid)
-                 write(*,*) ' ' 
-               endif
+             endif
+             if(debug.eq.1) then
+               write(*,*) '  Modified Mass:',mshA%mass(1,:,pid)
+               write(*,*) ' ' 
              endif
 
              cycle iloop
