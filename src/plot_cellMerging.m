@@ -36,10 +36,10 @@ base.lagrange.p1.l2 = [0.13905677101460567        5.2522707400047830E-002   1.13
 base.lagrange.p1.cons = [2.5809996556810377E-003  -5.4506782951047050E-004  -6.2567924626277804E-005  -3.6065007995578213E-006  -1.8312580379875598E-007];
 
 base.lagrange.p2.l2 = [2.8715542958208582E-002   2.6916331092555821E-003   2.1234737319991985E-004   2.4069049414627405E-005   2.9698656840838573E-006];
-base.lagrange.p2.cons = [0.39648451698389620       0.39696891376867000       0.39663943158115317       0.39648196318405071       0.39640685066543296];
+base.lagrange.p2.cons = [-1.3826073488102386E-003  -2.8014648676355502E-005  -1.2707673529566144E-006  -8.2669196599383099E-008  -5.3819386169884353E-009];
 
 base.lagrange.p3.l2 = [4.7190705848199109E-003   1.7618488181622786E-004   8.9339422387308516E-006   5.6378424937694400E-007   1.2319245960449388E-007];
-base.lagrange.p3.cons = [-9.7928305631267420E-007  -5.8863419977184250E-007  -3.0490229674384750E-008   6.6429308720472591E-009   7.9865597468753435E-009];
+base.lagrange.p3.cons = [-9.7928305631267420E-07  -5.8863419977184250E-007  -3.0490229674384750E-008   6.6429308720472591E-009   7.9865597468753435E-009];
 
 base.lagrange.p4.l2 = [5.1546559875049211E-004   1.1467957216868954E-005   3.7857455005431421E-007   1.8352725989409218E-007   1.1121466206592967E-007];
 base.lagrange.p4.cons = [3.7249135267369837E-006  -1.5509117878842460E-008   3.4038895424526316E-008   3.5025322531190284E-008   3.5042550861064115E-008];
@@ -101,7 +101,7 @@ cons.lagrange.p5.cons = [1.5315521073588911E-010   7.6932904491400222E-013   5.4
 % % ylabel('L2 Error','fontsize',18)
 % % set(gca,'fontsize',18')
 % % % ylim([1e-8 1])
-% % title({'Lagrange','CFL = 0.01'},'FontSize',30')
+% % title({'Lagrange','99% Cut'},'FontSize',30')
 % % 
 % % subplot(1,2,2)
 % % loglog(ndof(1,:),abs(base.lagrange.p1.cons),'b--',ndof(1,:),abs(cons.lagrange.p1.cons),'b-','linewidth',3)
@@ -120,7 +120,7 @@ cons.lagrange.p5.cons = [1.5315521073588911E-010   7.6932904491400222E-013   5.4
 % % xlabel('1/N_{elem}','fontsize',18)
 % % ylabel('Conservation Error','fontsize',18)
 % % set(gca,'fontsize',18')
-% % title({'Lagrange','CFL = 0.01'},'FontSize',30')
+% % title({'Lagrange','99% Cut'},'FontSize',30')
 
 
 figure(10)
@@ -143,13 +143,12 @@ xlabel('1/N_{elem}','fontsize',18)
 ylabel('L2 Error','fontsize',18)
 set(gca,'fontsize',18')
 ylim([1e-8 1])
-title({'Lagrange','CFL = 0.01'},'FontSize',30')
+title({'Lagrange','99% Cut'},'FontSize',30')
 
 subplot(1,2,2)
 loglog(dx,abs(base.lagrange.p1.cons),'b--',dx,abs(cons.lagrange.p1.cons),'b-','linewidth',3)
 hold on; 
-% loglog(dx,abs(base.lagrange.p2.cons),'r--',dx,abs(cons.lagrange.p2.cons),'r-','linewidth',3)
-loglog(dx,abs(base.lagrange.p2.cons),'w--',dx,abs(cons.lagrange.p2.cons),'r-','linewidth',3)
+loglog(dx,abs(base.lagrange.p2.cons),'r--',dx,abs(cons.lagrange.p2.cons),'r-','linewidth',3)
 loglog(dx,abs(base.lagrange.p3.cons),'g--',dx,abs(cons.lagrange.p3.cons),'g-','linewidth',3)
 loglog(dx,abs(base.lagrange.p4.cons),'m--',dx,abs(cons.lagrange.p4.cons),'m-','linewidth',3); 
 loglog(dx,abs(base.lagrange.p5.cons),'c--',dx,abs(cons.lagrange.p5.cons),'c-','linewidth',3); 
@@ -159,11 +158,12 @@ loglog(dx,abs(base.lagrange.p5.cons),'c--',dx,abs(cons.lagrange.p5.cons),'c-','l
 % loglog(dx,abs(base.lagrange.p4.cons(2)/dx(2).^5)*dx.^5,'k--')
 % loglog(dx,abs(base.lagrange.p5.cons(2)/dx(2).^6)*dx.^6,'k--')
 grid on;
+ylim([1e-17 1e-2])
 grid minor; 
 xlabel('1/N_{elem}','fontsize',18)
 ylabel('Conservation Error','fontsize',18)
 set(gca,'fontsize',18')
-title({'Lagrange','CFL = 0.01'},'FontSize',30')
+title({'Lagrange','99% Cut'},'FontSize',30')
 set(gcf,'Position',scrsz);
 saveas(gcf,'ConsOverset_CellMerging_Lagrange_99pctCut.png');
 close(gcf);
@@ -190,7 +190,7 @@ close(gcf);
 % ylabel('L2 Error','fontsize',18)
 % set(gca,'fontsize',18')
 % % ylim([1e-8 1])
-% title({'Legendre','CFL = 0.01'},'FontSize',30')
+% title({'Legendre','99% Cut'},'FontSize',30')
 % 
 % subplot(1,2,2)
 % loglog(dx,abs(base.legendre.p1.cons),'b--',dx,abs(cons.legendre.p1.cons),'b','linewidth',3)
@@ -209,4 +209,159 @@ close(gcf);
 % xlabel('1/N_{elem}','fontsize',18)
 % ylabel('Conservation Error','fontsize',18)
 % set(gca,'fontsize',18')
-% title({'Legendre','CFL = 0.01'},'FontSize',30')
+% title({'Legendre','99% Cut'},'FontSize',30')
+
+%% m2start = -0.5 - dx(2)*0.90
+% Baseline Abutting Method
+base.legendre.p1.l2 = [1.6765449067581831E-002   5.7242656668346961E-003   1.2206951905958544E-003   2.1365249958722176E-004   3.9464805396971161E-005];
+base.legendre.p1.cons = [-9.4496309399845491E-005  -6.2303509111988342E-005  -2.0919789927367760E-006   9.6643524169492956E-008   2.7298075633286345E-008];
+
+base.legendre.p2.l2 = [3.2090886436799268E-003   2.4424042267942304E-004   1.5492158106219127E-005   1.5806009481025005E-006   1.9229961664220241E-007];
+base.legendre.p2.cons = [-1.8315247259234613E-004  -8.6545720316688612E-007   2.2816193587238409E-009  -4.3953660155970908E-012   6.0920296585109668E-012];
+
+base.legendre.p3.l2 = [5.0337548393662463E-004   1.8860531301872488E-005   9.8357178104406351E-007   6.0868842247452506E-008   1.2936797534971091E-008];
+base.legendre.p3.cons = [-9.5798795170798368E-006   5.6432799037942072E-008   1.8292017275878258E-009   3.4347663602218859E-011  -9.7384669772715426E-012];
+
+base.legendre.p4.l2 = [4.4011746398404877E-005   7.0077841142936975E-007   2.5723532283141137E-008   1.2707483254631212E-008   1.0830623355647697E-008];
+base.legendre.p4.cons = [-3.0264019609815840E-007  -2.7169601221621598E-009   1.6791833340468187E-009   1.7100567697991842E-009   1.7103266164442132E-009];
+
+base.legendre.p5.l2 = [7.9469426215944998E-006   1.1532338271007949E-007   2.0025149463224594E-008   1.4437568094157017E-008   1.3079155483203415E-008];
+base.legendre.p5.cons = [-1.7259153542448225E-007   4.5347092678116319E-009   4.0502249887275354E-009   4.0284327262885000E-009   4.0225528810666766E-009];
+
+base.lagrange.p1.l2 = [0.14445001417793107        5.4256555024397628E-002   1.2049762304374897E-002   2.1334221313525480E-003   3.9489362306799016E-004];
+base.lagrange.p1.cons = [-3.5090952909039297E-004  -5.9195613677087700E-004  -2.3242288216429596E-005   5.5120368464001146E-007   2.1747653428105806E-007];
+
+base.lagrange.p2.l2 = [2.9744245998739302E-002   2.5607220579665761E-003   1.6652501833810612E-004   1.7139580609976811E-005   2.0807070657108944E-006];
+base.lagrange.p2.cons = [-1.9895064180500688E-003  -2.7549796402737137E-005  -1.2664392504135868E-006  -8.2871500828307632E-008  -5.1791326782790748E-009];
+
+base.lagrange.p3.l2 = [5.0758555997859178E-003   1.9545100193651420E-004   1.0219092647902650E-005   6.4432177483855777E-007   1.2504958182090930E-007];
+base.lagrange.p3.cons = [-1.0681827257585930E-004  -4.1325299587890996E-007  -1.4657126679029631E-008  -6.9834021898529386E-010  -1.2975870378184595E-010];
+
+base.lagrange.p4.l2 = [4.6168247478623603E-004   7.4480802362465711E-006   2.5357115815633659E-007   1.7893364406103350E-007   1.0353184674836628E-007];
+base.lagrange.p4.cons = [-1.0935955654933771E-006  -3.5736583359202712E-008   1.6005608505231805E-008   1.7084406944700703E-008   1.7102998128848412E-008];
+
+base.lagrange.p5.l2 = [8.3817996367918158E-005   1.2225175751355135E-006   1.4525462355190472E-007   1.7842747051143741E-007   1.5458890778607412E-007];
+base.lagrange.p5.cons = [-1.7824191556603530E-006   4.8811011676974658E-008   4.0529472888906071E-008   4.0284754365682574E-008   4.0225528685766676E-008];
+
+% Conservative Overset WITH Cell merging
+cons.legendre.p1.l2 = [1.5293201901746848E-002   4.9564221436772145E-003   9.1538371977368063E-004   1.2837379332049549E-004   1.8030389665289336E-005];
+cons.legendre.p1.cons = [-2.2724650347069608E-005  -3.4460239904249290E-006  -1.4607639921976334E-007   6.3081104562101586E-008   4.8634735169694743E-008];
+
+cons.legendre.p2.l2 = [3.0896945737390142E-003   2.1003261538524851E-004   9.0486554730453349E-006   2.3416122157765218E-006   1.8506300192941094E-006];
+cons.legendre.p2.cons = [-6.7681742588615590E-006  -5.2197857944996651E-007  -1.3933478048427927E-007  -8.2425469366542714E-008  -4.7419992106612074E-008];
+
+cons.legendre.p3.l2 = [3.5475672734786961E-004   7.5467298241212780E-006   1.5976785972644576E-006   1.5688376183527270E-006   1.2970890030442586E-006];
+cons.legendre.p3.cons = [-2.3806221037883657E-006  -5.4700524665385331E-009   7.0060799925442119E-008   4.9694170702052620E-008   2.9059694012234516E-008];
+
+cons.legendre.p4.l2 = [3.4279885610601931E-005   7.6455828275363594E-007   9.0140337671899315E-007   8.7970560384114460E-007   7.2878103089097185E-007];
+cons.legendre.p4.cons = [3.1969660585495774E-008  -2.6754110545035292E-008  -2.4652309506267844E-008  -1.7054864624721500E-008  -1.0001645414647875E-008];
+
+cons.legendre.p5.l2 = [3.7791151921708296E-006   2.3238565705957143E-007   3.2114120738543293E-007   3.2288825917875591E-007   2.7121818198170947E-007];
+cons.legendre.p5.cons = [2.0700809635898487E-008  -5.2920716420157277E-011   1.7918008743400549E-010   2.2556490703040666E-010   1.6042461109533335E-010];
+
+cons.lagrange.p1.l2 = [0.13024082450049188        4.6774406157068807E-002   9.0300774360331515E-003   1.2840957421437196E-003   1.8035166800499229E-004];
+cons.lagrange.p1.cons = [-2.7649152746223038E-005  -2.7689765223493090E-006  -3.1788921517339475E-007  -3.8449214145863664E-008  -4.7404423719754618E-009];
+
+cons.lagrange.p2.l2 = [2.8212701936268764E-002   2.2292542159645934E-003   1.0492494398959134E-004   8.6344974133098522E-006   1.0178175446954731E-006];
+cons.lagrange.p2.cons = [4.9440889759999607E-006   1.9092020459021697E-007   8.1015957831276353E-009   3.8862940643369370E-010   2.0663581956625876E-011];
+
+cons.lagrange.p3.l2 = [3.5743158029595558E-003   9.1194666002291315E-005   4.1745818151669896E-006   3.0388115005107422E-007   1.1964245360698122E-007];
+cons.lagrange.p3.cons = [-1.0783805194369833E-006  -3.6213727683254149E-008  -1.1140450228985799E-009  -3.4255043246389505E-011  -1.0600964550633307E-012];
+
+cons.lagrange.p4.l2 = [3.7598382697954662E-004   4.0918310662661108E-006   1.7904925431443793E-007   1.7767426055219586E-007   1.0106529960313267E-007];
+cons.lagrange.p4.cons = [-6.3650319792607490E-008   8.0163542470756965E-011   6.3642979775124786E-012   1.2950751582252451E-013   2.3314683517128287E-015];
+
+cons.lagrange.p5.l2 = [4.2483599354368402E-005   5.8105125336658858E-007   1.3476290563270500E-007   1.7012798753092814E-007   1.4489730018112734E-007];
+cons.lagrange.p5.cons = [2.7324858098420890E-008   1.2396872417497207E-010   6.6363581296968732E-013   4.1078251911130792E-015  -8.3266726846886741E-016];
+
+%% Plots
+close all; 
+
+figure(10)
+subplot(1,2,1);
+loglog(dx,abs(base.lagrange.p1.l2),'b--',dx,cons.lagrange.p1.l2,'b-','linewidth',3)
+hold on; 
+loglog(dx,abs(base.lagrange.p2.l2),'r--',dx,cons.lagrange.p2.l2,'r-','linewidth',3)
+loglog(dx,abs(base.lagrange.p3.l2),'g--',dx,cons.lagrange.p3.l2,'g-','linewidth',3)
+loglog(dx,abs(base.lagrange.p4.l2),'m--',dx,cons.lagrange.p4.l2,'m-','linewidth',3); 
+loglog(dx,abs(base.lagrange.p5.l2),'c--',dx,cons.lagrange.p5.l2,'c-','linewidth',3); 
+loglog(dx,(base.lagrange.p1.l2(2)/dx(2).^2)*dx.^2,'k--')
+loglog(dx,(base.lagrange.p2.l2(2)/dx(2).^3)*dx.^3,'k--')
+loglog(dx,(base.lagrange.p3.l2(2)/dx(2).^4)*dx.^4,'k--')
+loglog(dx,(base.lagrange.p4.l2(2)/dx(2).^5)*dx.^5,'k--')
+loglog(dx,(base.lagrange.p5.l2(2)/dx(2).^6)*dx.^6,'k--')
+grid on;
+legend('base p=1','cons p=1','base p=2','cons p=2','base p=3','cons p=3','base p=4','cons p=4', 'base p=5','cons p=5','location','southeast');
+grid minor; 
+xlabel('1/N_{elem}','fontsize',18)
+ylabel('L2 Error','fontsize',18)
+set(gca,'fontsize',18')
+ylim([1e-8 1])
+title({'Lagrange','90% Cut'},'FontSize',30')
+
+subplot(1,2,2)
+loglog(dx,abs(base.lagrange.p1.cons),'b--',dx,abs(cons.lagrange.p1.cons),'b-','linewidth',3)
+hold on; 
+loglog(dx,abs(base.lagrange.p2.cons),'r--',dx,abs(cons.lagrange.p2.cons),'r-','linewidth',3)
+loglog(dx,abs(base.lagrange.p3.cons),'g--',dx,abs(cons.lagrange.p3.cons),'g-','linewidth',3)
+loglog(dx,abs(base.lagrange.p4.cons),'m--',dx,abs(cons.lagrange.p4.cons),'m-','linewidth',3); 
+loglog(dx,abs(base.lagrange.p5.cons),'c--',dx,abs(cons.lagrange.p5.cons),'c-','linewidth',3); 
+% loglog(dx,abs(base.lagrange.p1.cons(2)/dx(2).^2)*dx.^2,'k--')
+% loglog(dx,abs(base.lagrange.p2.cons(3)/dx(3).^3)*dx.^3,'k--')
+% loglog(dx,abs(base.lagrange.p3.cons(3)/dx(3).^4)*dx.^4,'k--')
+% loglog(dx,abs(base.lagrange.p4.cons(2)/dx(2).^5)*dx.^5,'k--')
+% loglog(dx,abs(base.lagrange.p5.cons(2)/dx(2).^6)*dx.^6,'k--')
+grid on;
+grid minor; 
+xlabel('1/N_{elem}','fontsize',18)
+ylabel('Conservation Error','fontsize',18)
+ylim([1e-17 1e-2])
+set(gca,'fontsize',18')
+title({'Lagrange','90% Cut'},'FontSize',30')
+set(gcf,'Position',scrsz);
+saveas(gcf,'ConsOverset_CellMerging_Lagrange_90pctCut.png');
+% close(gcf);
+
+figure(2)
+subplot(1,2,1);
+loglog(dx,abs(base.legendre.p1.l2),'b--',dx,cons.legendre.p1.l2,'b','linewidth',3)
+hold on; 
+loglog(dx,abs(base.legendre.p2.l2),'r--',dx,cons.legendre.p2.l2,'r','linewidth',3)
+loglog(dx,abs(base.legendre.p3.l2),'g--',dx,cons.legendre.p3.l2,'g','linewidth',3)
+loglog(dx,abs(base.legendre.p4.l2),'m--',dx,cons.legendre.p4.l2,'m','linewidth',3); 
+loglog(dx,abs(base.legendre.p5.l2),'c--',dx,cons.legendre.p5.l2,'c','linewidth',3); 
+loglog(dx,(base.legendre.p1.l2(2)/dx(2).^2)*dx.^2,'k--')
+loglog(dx,(base.legendre.p2.l2(2)/dx(2).^3)*dx.^3,'k--')
+loglog(dx,(base.legendre.p3.l2(2)/dx(2).^4)*dx.^4,'k--')
+loglog(dx,(base.legendre.p4.l2(2)/dx(2).^5)*dx.^5,'k--')
+loglog(dx,(base.legendre.p5.l2(2)/dx(2).^6)*dx.^6,'k--')
+grid on;
+legend('base p=1','cons p=1','base p=2','cons p=2','base p=3','cons p=3','base p=4','cons p=4', 'base p=5','cons p=5','location','southeast');
+grid minor; 
+xlabel('1/N_{elem}','fontsize',18)
+ylabel('L2 Error','fontsize',18)
+set(gca,'fontsize',18')
+% ylim([1e-8 1])
+title({'Legendre','90% Cut'},'FontSize',30')
+
+subplot(1,2,2)
+loglog(dx,abs(base.legendre.p1.cons),'b--',dx,abs(cons.legendre.p1.cons),'b','linewidth',3)
+hold on; 
+loglog(dx,abs(base.legendre.p2.cons),'r--',dx,abs(cons.legendre.p2.cons),'r','linewidth',3)
+loglog(dx,abs(base.legendre.p3.cons),'g--',dx,abs(cons.legendre.p3.cons),'g','linewidth',3)
+loglog(dx,abs(base.legendre.p4.cons),'m--',dx,abs(cons.legendre.p4.cons),'m','linewidth',3); 
+loglog(dx,abs(base.legendre.p5.cons),'c--',dx,abs(cons.legendre.p5.cons),'c','linewidth',3); 
+loglog(dx,abs(base.legendre.p1.cons(2)/dx(2).^2)*dx.^2,'k--')
+loglog(dx,abs(base.legendre.p2.cons(3)/dx(3).^3)*dx.^3,'k--')
+loglog(dx,abs(base.legendre.p3.cons(3)/dx(3).^4)*dx.^4,'k--')
+loglog(dx,abs(base.legendre.p4.cons(2)/dx(2).^5)*dx.^5,'k--')
+loglog(dx,abs(base.legendre.p5.cons(2)/dx(2).^6)*dx.^6,'k--')
+ylim([1e-17 1e-2])
+grid on;
+grid minor; 
+xlabel('1/N_{elem}','fontsize',18)
+ylabel('Conservation Error','fontsize',18)
+set(gca,'fontsize',18')
+title({'Legendre','90% Cut'},'FontSize',30')
+set(gcf,'Position',scrsz);
+saveas(gcf,'ConsOverset_CellMerging_Legendre_90pctCut.png');
