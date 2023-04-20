@@ -13,7 +13,7 @@ program conservative_overset
   real*8, allocatable :: elemInfo1(:,:),elemInfo2(:,:)
   integer :: nincomp1,nincomp2,nrk,debug
   integer :: conswitch,noverlap
-  real*8 :: rk(4),dx(nmesh),ainf,cfl,foverlap,sweep(5,3)
+  real*8 :: rk(4),dx(nmesh),ainf,muinf,cfl,foverlap,sweep(5,3)
   real*8 :: test1(6),test2(6)
   real*8 :: time(2),m2start
   integer :: h
@@ -24,9 +24,10 @@ program conservative_overset
   ! Inputs
   cfl = 0.01d0
   ainf = 1d0
+  muinf = 0.01d0
   !
   ! Set up the problem and bases types
-  call set_type('linear_advection',ainf)
+  call set_type('linear_advection',ainf,muinf)
 !  call set_type('burgers')
   ilim = 0      ! flag to control slope limiting
   isupg = 0  ! supg flag

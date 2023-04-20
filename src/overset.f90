@@ -308,7 +308,7 @@ contains
                call shapefunction(mshA%nshp,xg,[xp1,xp2],qA,qtmp,dqtmp)
                qval = sum(qtmp)
                dqval = sum(dqtmp)/mshA%dx(pidA)
-               call volint(qval,vol)
+               call volint(qval,dqval,vol)
                do bb = 1,mshA%nshp
                  ! Volume Integral
                  mshA%rhs(:,bb,pidA) = mshA%rhs(:,bb,pidA) + dwtmp(bb)*vol*(mshA%wgauss(aa)*fact) ! scale gauss weights by length of remaining element parent

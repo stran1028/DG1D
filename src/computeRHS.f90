@@ -29,7 +29,7 @@ subroutine computeRHS(msh,isupg,dt)
         qtmp = SUM(qvals)
         dqtmp = SUM(dqvals)/msh%dx(i)
         do k = 1,msh%nshp
-           call volint(qtmp,vol)
+           call volint(qtmp,dqtmp,vol)
            vol = vol*msh%dshp(j,k)*msh%wgauss(j)
            msh%rhs(1,k,i) = msh%rhs(1,k,i) + vol 
 

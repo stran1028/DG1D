@@ -1,12 +1,12 @@
 module pde
   character*20 :: pde_descriptor
   integer, save :: pde_set=0
-  real*8 :: a
+  real*8 :: a,diff
 contains
-  subroutine set_type(pdetype,wavespeed)
+  subroutine set_type(pdetype,wavespeed,muinf)
     implicit none
     character*(*) :: pdetype
-    real*8, optional, intent(in) :: wavespeed
+    real*8, optional, intent(in) :: wavespeed,mu
     write(pde_descriptor,'(A20)') pdetype
     pde_descriptor=trim(adjustl(pde_descriptor))
     if (pde_descriptor .ne. 'linear_advection' .and. & 
@@ -20,6 +20,12 @@ contains
     else
        a=1d0
     endif
+    if (present(muinf)) then
+       mu=muinf
+    else
+       mu=0d0
+    endif
+
   end subroutine set_type
   !
   subroutine initqleg(msh)
@@ -99,7 +105,7 @@ contains
     endif
   end subroutine flux
   !
-  subroutine volint(qtmp,vol)
+  subroutine volint(qtmp,dqtmp,vol)
     !
     implicit none
     !
@@ -107,7 +113,7 @@ contains
     real*8, intent(out) :: vol
     !
     if (index(pde_descriptor,'linear_advection') > 0 ) then
-     vol=a*qtmp
+     vol=a*qtmp - mu*dqtmp
     else if (index(pde_descriptor,'burgers') > 0) then
      vol=0.5*qtmp*qtmp
     endif
