@@ -22,4 +22,6 @@ subroutine clearMem(msh)
   if (allocated(msh%xgauss)) deallocate(msh%xgauss)
   if (allocated(msh%shp)) deallocate(msh%shp)
   if (allocated(msh%dshp)) deallocate(msh%dshp)
+  if (allocated(msh%parent)) deallocate(msh%parent)
+  if (allocated(msh%child)) deallocate(msh%child)
 end subroutine clearMem
