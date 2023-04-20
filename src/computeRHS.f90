@@ -69,9 +69,11 @@ subroutine computeRHS(msh,isupg,dt)
           call shapefunction(msh%nshp,-0.5d0,[-0.5d0,0.5d0],qvals,w,dqvals)
           call shapefunction(msh%nshp,msh%xe(2,e1),msh%xe(:,e1),msh%q(1,:,e1),qvals,dqvals)
           ql = sum(qvals)
+          dql = sum(dqvals)
           call shapefunction(msh%nshp,msh%xe(1,i),msh%xe(:,i),msh%q(1,:,i),qvals,dqvals)
           qr = sum(qvals)
-          call flux(ql,qr,flx)
+          dqr = sum(dqvals)
+          call flux(ql,qr,dql,dqr,flx)
           do j = 1,msh%nshp
               msh%rhs(:,j,i) = msh%rhs(:,j,i) + w(j)*flx
           enddo
@@ -84,9 +86,11 @@ subroutine computeRHS(msh,isupg,dt)
           call shapefunction(msh%nshp,0.5d0,[-0.5d0,0.5d0],qvals,w,dqvals)
           call shapefunction(msh%nshp,msh%xe(2,i),msh%xe(:,i),msh%q(1,:,i),qvals,dqvals)
           ql = sum(qvals)
+          dql = sum(dqvals)
           call shapefunction(msh%nshp,msh%xe(1,e2),msh%xe(:,e2),msh%q(1,:,e2),qvals,dqvals)
           qr = sum(qvals)
-          call flux(ql,qr,flx)
+          dqr = sum(dqvals)
+          call flux(ql,qr,dql,dqr,flx)
           do j = 1,msh%nshp
               msh%rhs(:,j,i) = msh%rhs(:,j,i) - w(j)*flx
           enddo

@@ -217,9 +217,11 @@ contains
                call shapefunction(mshA%nshp,xcut(2),[xp1,xp2],wtmp,wtmp,dwtmp)
                call shapefunction(mshB%nshp,xcut(2),[yp1,yp2],qB,qtmp,dqtmp)
                qL = sum(qtmp)
+               dqL = sum(dqtmp)
                call shapefunction(mshA%nshp,xcut(2),[xp1,xp2],qA,qtmp,dqtmp)
                qR = sum(qtmp)
-               call flux(qL,qR,flx)
+               dqR = sum(dqtmp)
+               call flux(qL,qR,dqL,dqR,flx)
                do k = 1,mshA%nshp
                  mshA%rhs(:,k,pidA) = mshA%rhs(:,k,pidA) + wtmp(k)*flx
                enddo
@@ -232,9 +234,11 @@ contains
                  neigh = mshA%face(2,eid)
                  call shapefunction(mshA%nshp,x2,[xp1,xp2],qA,qtmp,dqtmp)
                  qL = sum(qtmp)
+                 dqL = sum(dqtmp)
                  call shapefunction(mshA%nshp,x2,mshA%xe(:,neigh),mshA%q(1,:,neigh),qtmp,dqtmp)
                  qR = sum(qtmp)
-                 call flux(qL,qR,flx)
+                 dqR = sum(dqtmp)
+                 call flux(qL,qR,dqL,dqR,flx)
                  do k = 1,mshA%nshp
                    mshA%rhs(:,k,pidA) = mshA%rhs(:,k,pidA) - wtmp(k)*flx
                  enddo
@@ -271,9 +275,11 @@ contains
                  neigh = mshA%face(1,eid)
                  call shapefunction(mshA%nshp,x1,mshA%xe(:,neigh),mshA%q(1,:,neigh),qtmp,dqtmp)
                  qL = sum(qtmp)
+                 dqL = sum(dqtmp)
                  call shapefunction(mshA%nshp,x1,[x1,x2],qA,qtmp,dqtmp)
                  qR = sum(qtmp)
-                 call flux(qL,qR,flx)
+                 dqR = sum(dqtmp)
+                 call flux(qL,qR,dqL,dqR,flx)
                  do k = 1,mshA%nshp
                    mshA%rhs(:,k,pidA) = mshA%rhs(:,k,pidA) + wtmp(k)*flx
                  enddo
@@ -286,9 +292,11 @@ contains
                call shapefunction(mshA%nshp,xcut(1),[xp1,xp2],wtmp,wtmp,dwtmp)
                call shapefunction(mshB%nshp,xcut(1),[y1,y2],qB,qtmp,dqtmp)
                qR = sum(qtmp)
+               dqR = sum(dqtmp)
                call shapefunction(mshA%nshp,xcut(1),[xp1,xp2],qA,qtmp,dqtmp)
                qL = sum(qtmp)
-               call flux(ql,qr,flx)
+               dqL = sum(dqtmp)
+               call flux(ql,qr,dql,dqr,flx)
                do k = 1,mshA%nshp
                  mshA%rhs(:,k,pidA) = mshA%rhs(:,k,pidA) - wtmp(k)*flx
                enddo

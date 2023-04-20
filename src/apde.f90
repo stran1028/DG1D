@@ -88,18 +88,27 @@ contains
     endif
   end subroutine initq
   !
-  subroutine flux(ql,qr,flx)
+  subroutine flux(ql,qr,dql,dqr,flx)
     !
     implicit none
     !
-    real*8, intent(in) :: ql
-    real*8, intent(in) :: qr
-    real*8, intent(out) :: flx
+    real*8, intent(in) :: ql,dql
+    real*8, intent(in) :: qr,dqr
+    real*8, intent(out) :: flxa,flxd
+    real*8 :: C11,C12
     !
 
-    ! Lax Friedrichs Flux
     if (index(pde_descriptor,'linear_advection') > 0 ) then
-     flx=0.5d0*(a*(ql+qr)-abs(a)*(qr-ql))
+      ! Lax Friedrichs Flux
+      ! flxa=0.5d0*(a*(ql+qr)-abs(a)*(qr-ql))
+
+      C11 = 0.0d0
+      C12 = 0.5d0 ! 0.5 dot n-
+
+      flx=a*(0.5d0*(ql+qr) + C12*(ql-qr) )
+      dflx = mu*(0.5d0*(dql+dqr) + C11*(ql-qr) - C12*(dql-dqr))
+
+      flx=flxa-flxd
     else if (index(pde_descriptor,'burgers') > 0) then
      flx=0.5d0*(0.5d0*(ql*ql+qr*qr)-0.5d0*(ql+qr)*(qr-ql))
     endif
@@ -109,7 +118,7 @@ contains
     !
     implicit none
     !
-    real*8, intent(in) :: qtmp
+    real*8, intent(in) :: qtmp,dqtmp
     real*8, intent(out) :: vol
     !
     if (index(pde_descriptor,'linear_advection') > 0 ) then
