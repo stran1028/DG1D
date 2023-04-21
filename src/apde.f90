@@ -1,12 +1,12 @@
 module pde
   character*20 :: pde_descriptor
   integer, save :: pde_set=0
-  real*8 :: a,diff
+  real*8 :: a,mu
 contains
   subroutine set_type(pdetype,wavespeed,muinf)
     implicit none
     character*(*) :: pdetype
-    real*8, optional, intent(in) :: wavespeed,mu
+    real*8, optional, intent(in) :: wavespeed,muinf
     write(pde_descriptor,'(A20)') pdetype
     pde_descriptor=trim(adjustl(pde_descriptor))
     if (pde_descriptor .ne. 'linear_advection' .and. & 
@@ -94,7 +94,8 @@ contains
     !
     real*8, intent(in) :: ql,dql
     real*8, intent(in) :: qr,dqr
-    real*8, intent(out) :: flxa,flxd
+    real*8, intent(out) :: flx
+    real*8 :: flxa,flxd
     real*8 :: C11,C12
     !
 
@@ -105,8 +106,8 @@ contains
       C11 = 0.0d0
       C12 = 0.5d0 ! 0.5 dot n-
 
-      flx=a*(0.5d0*(ql+qr) + C12*(ql-qr) )
-      dflx = mu*(0.5d0*(dql+dqr) + C11*(ql-qr) - C12*(dql-dqr))
+      flxa=a*(0.5d0*(ql+qr) + C12*(ql-qr) )
+      flxd = mu*(0.5d0*(dql+dqr) + C11*(ql-qr) - C12*(dql-dqr))
 
       flx=flxa-flxd
     else if (index(pde_descriptor,'burgers') > 0) then

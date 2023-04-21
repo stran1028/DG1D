@@ -141,7 +141,7 @@ contains
     !
     integer :: i,j,k,e,nrows,aa,bb,cc,eid,neigh,id,pidA,pidB
     real*8 :: x1,x2,xp1,xp2,f1,f2,y1,y2,yp1,yp2,qA(mshA%nshp),qB(mshB%nshp)
-    real*8 :: xrem(2),xcut(2),xc,lcut,xg,vol,flx,qL,qR,fact,xfac
+    real*8 :: xrem(2),xcut(2),xc,lcut,xg,vol,flx,qL,qR,dqL,dqR,fact,xfac
     real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp),tmp
     real*8 ::qtmp(mshA%nshp),dqtmp(mshA%nshp),dq,dvol(mshA%nshp),dflx(mshA%nshp)
     real*8 :: qval,dqval,dudt,resid,tau

@@ -7,7 +7,7 @@ subroutine computeRHS(msh,isupg,dt)
   type(mesh), intent(inout) :: msh
   real*8, intent(in) :: dt
   integer :: i,j,k,e1,e2,isupg,cid
-  real*8 :: ql,qr,flx,qtmp,dqtmp,qvals(msh%nshp),dqvals(msh%nshp),vol,w(msh%nshp)
+  real*8 :: ql,qr,dql,dqr,flx,qtmp,dqtmp,qvals(msh%nshp),dqvals(msh%nshp),vol,w(msh%nshp)
   real*8 :: dudt,resid,tau
   integer, save :: iout=0
   !

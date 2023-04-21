@@ -33,9 +33,9 @@ program conservative_overset
   isupg = 0  ! supg flag
   ireg = 0 ! regularization flag
   ieuler = 0
-  do conswitch = 1,1    ! cons overset loop 
+  do conswitch = 0,0    ! cons overset loop 
   do s = 1,1            ! shape function loop
-  do noverlap = 3,3     ! foverlap loop
+  do noverlap = 1,1     ! foverlap loop
   do order = 1,1      ! p-order loop
     sweep = 0d0
 
@@ -70,7 +70,7 @@ program conservative_overset
     endif
 
     ! Do a mesh sweep
-    do h = 1,1
+    do h = 2,2
       ! start timer
       call cpu_time(time(1))
       if(h.eq.1) then  
@@ -111,6 +111,7 @@ program conservative_overset
       dt=cfl*minval(dx)/ainf
       ntime = 1.*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
       write(*,*) ' '
+      write(*,*) '    ainf, muinf = ',ainf,muinf
       write(*,*) '    h, dx = ',h,dx
       write(*,*) '    m2start = ',m2start
       write(*,*) '    ilim,isupg,ieuler = ',ilim,isupg,ieuler
