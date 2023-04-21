@@ -16,7 +16,7 @@ program conservative_overset
   real*8 :: rk(4),dx(nmesh),ainf,muinf,cfl,foverlap,sweep(5,3)
   real*8 :: test1(6),test2(6)
   real*8 :: time(2),m2start
-  integer :: h
+  integer :: h,isMerged(nmesh)
   !
   type(mesh), allocatable :: msh(:)
   allocate(msh(nmesh))
@@ -33,9 +33,9 @@ program conservative_overset
   isupg = 0  ! supg flag
   ireg = 0 ! regularization flag
   ieuler = 0
-  do conswitch = 0,0    ! cons overset loop 
+  do conswitch = 1,1    ! cons overset loop 
   do s = 1,1            ! shape function loop
-  do noverlap = 1,1     ! foverlap loop
+  do noverlap = 1,3     ! foverlap loop
   do order = 1,1      ! p-order loop
     sweep = 0d0
 
@@ -150,13 +150,23 @@ program conservative_overset
                 consoverset,foverlap,debug)
         debug = 0
         call fixMassIncompleteElements(msh(2),msh(1),elemInfo1,nincomp1,&
-                consoverset,foverlap,debug)
+                consoverset,foverlap,debug)      
       end if
       !
 
       do n=1,nmesh
+       ! check if cells are merged or not
+       isMerged(n) = 0
+       do i=1,msh(n)%nelem
+         if(msh(n)%parent(i).ne.i) then
+           isMerged(n) = 1
+           cycle
+         endif
+       enddo
        call output(n,msh(n))
       enddo
+      write(*,*) ' '
+      write(*,*) '    isMerged = ',isMerged
       call computeMoments(msh(1),mom0(:,1),err(1),nincomp1,elemInfo1)
       call computeMoments(msh(2),mom0(:,2),err(2),nincomp2,elemInfo2)
 
