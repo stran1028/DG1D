@@ -8,7 +8,7 @@ subroutine output(iout,msh)
   type(mesh), intent(in) :: msh
   !
   integer :: i,j,npts,bound
-  real*8 :: qout(msh%nshp),dqout(msh%nshp),q1,ic,error(1),xloc,dx
+  real*8 :: qtmp(msh%nshp),dqtmp(msh%nshp),q1,ic,error(1),xloc,dx
   character*22 :: fname
   !
   write(fname,'(A7,I0.3)') 'iblank.',iout
@@ -31,17 +31,17 @@ subroutine output(iout,msh)
          endif
          dx = msh%dx(i)/(npts-1)
          xloc = msh%xe(1,i) + (j-1)*dx
-         q1 = sum(qout)
+         q1 = sum(qtmp)
 
-         call shapefunction(msh%nshp,xloc,[msh%xe(1,i),msh%xe(2,i)],msh%sol(1,:,i),qout,dqout)
-         q1 = sum(qout)
-         call shapefunction(msh%nshp,xloc,[msh%xe(1,i),msh%xe(2,i)],msh%q0(1,:,i),qout,dqout)
-         ic = sum(qout)
+         call shapefunction(msh%nshp,xloc,[msh%xe(1,i),msh%xe(2,i)],msh%sol(1,:,i),qtmp,dqtmp)
+         q1 = sum(qtmp)
+         call shapefunction(msh%nshp,xloc,[msh%xe(1,i),msh%xe(2,i)],msh%q0(1,:,i),qtmp,dqtmp)
+         ic = sum(qtmp)
          error = q1-ic
          write(12,*) xloc,q1, error,bound
 
-!         call shapefunction(msh%nshp,msh%x(msh%e2n(j,i)),[msh%xe(1,i),msh%xe(2,i)],msh%sol(1,:,i),qout,dqout)
-!         q1 = sum(qout)
+!         call shapefunction(msh%nshp,msh%x(msh%e2n(j,i)),[msh%xe(1,i),msh%xe(2,i)],msh%sol(1,:,i),qtmp,dqtmp)
+!         q1 = sum(qtmp)
 !         error = msh%q0(1,j,i)-q1
 !         write(12,*) msh%x(msh%e2n(j,i)),q1, error
       enddo

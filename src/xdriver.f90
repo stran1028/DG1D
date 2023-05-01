@@ -15,7 +15,7 @@ program conservative_overset
   integer :: conswitch,noverlap
   real*8 :: rk(4),dx(nmesh),ainf,muinf,cfl,foverlap,sweep(5,3)
   real*8 :: test1(6),test2(6)
-  real*8 :: time(2),m2start
+  real*8 :: time(2),m2start,q1,qN
   integer :: h,isMerged(nmesh)
   !
   type(mesh), allocatable :: msh(:)
@@ -23,22 +23,23 @@ program conservative_overset
   !
   ! Inputs
   cfl = 0.01d0
-  ainf = 1d0
+  ainf = 2d0
   muinf = 0.00d0
+  q1 = 1d0
+  qN = 0d0
   !
   ! Set up the problem and bases types
-  call set_type('linear_advection',ainf,muinf)
-!  call set_type('burgers')
+  call set_type('linear_advection',ainf,muinf,q1,qN)
+!  call set_type('burgers',ainf,muinf,q1,qN)
   ilim = 0      ! flag to control slope limiting
   isupg = 0  ! supg flag
   ireg = 0 ! regularization flag
   ieuler = 0
-  do conswitch = 1,1    ! cons overset loop 
+  do conswitch = 0,1    ! cons overset loop 
   do s = 1,1            ! shape function loop
   do noverlap = 3,3     ! foverlap loop
-  do order = 1,1      ! p-order loop
+  do order = 1,5      ! p-order loop
     sweep = 0d0
-
 
     write(*,*) '----------------------------------'
     write(*,*) 'INPUTS: '
@@ -70,7 +71,7 @@ program conservative_overset
     endif
 
     ! Do a mesh sweep
-    do h = 1,1
+    do h = 1,5
       ! start timer
       call cpu_time(time(1))
       if(h.eq.1) then  
@@ -112,6 +113,7 @@ program conservative_overset
       ntime = 1.*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
       write(*,*) ' '
       write(*,*) '    ainf, muinf = ',ainf,muinf
+      if (index(pde_descriptor,'burgers') > 0) write(*,*) '    q1, qN = ',q1,qN  
       write(*,*) '    h, dx = ',h,dx
       write(*,*) '    m2start = ',m2start
       write(*,*) '    ilim,isupg,ieuler = ',ilim,isupg,ieuler
@@ -127,16 +129,14 @@ program conservative_overset
       call init_mesh(msh(2),[m2start,m2start+0.75d0],dx(2),0,order)
 !      call init_mesh(msh(2),[-0.268d0,0.732d0],dx(2),0,order)
       !
+      ! init BC
+      call initBC(msh(1))
+      !
+      ! init q
       do n=1,nmesh
        call initvar(msh(n))
        msh(n)%sol=msh(n)%q
       enddo
-      ! Store initial conditions (exact solution)
-      msh(1)%qold = msh(1)%q 
-      msh(2)%qold = msh(2)%q 
-      msh(1)%q0 = msh(1)%q 
-      msh(2)%q0 = msh(2)%q 
-
       !
       ! Blank out coarser overlapping cells 
       if(nmesh>1) then 
@@ -145,25 +145,36 @@ program conservative_overset
         call fixOverlap(msh(2),msh(1))
         call findIncompleteElements(msh(1),elemInfo1,nincomp1)
         call findIncompleteElements(msh(2),elemInfo2,nincomp2)
-        debug = 0
+        ! cut mass matrices and merge cells if needed
+        debug = 0      
         call fixMassIncompleteElements(msh(1),msh(2),elemInfo2,nincomp2,&
                 consoverset,foverlap,debug)
         debug = 0
         call fixMassIncompleteElements(msh(2),msh(1),elemInfo1,nincomp1,&
                 consoverset,foverlap,debug)      
+        ! project solution to merged cells
+        if(consoverset.eq.1) then
+           call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%q)
+           call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%q)
+        endif
       end if
       !
-
+      ! Store initial conditions (exact solution)
+      msh(1)%qold = msh(1)%q 
+      msh(2)%qold = msh(2)%q 
+      msh(1)%q0 = msh(1)%q 
+      msh(2)%q0 = msh(2)%q 
+      !
       do n=1,nmesh
-       ! check if cells are merged or not
-       isMerged(n) = 0
-       do i=1,msh(n)%nelem
-         if(msh(n)%parent(i).ne.i) then
-           isMerged(n) = 1
-           cycle
-         endif
-       enddo
-       call output(n,msh(n))
+        ! check if cells are merged or not
+        isMerged(n) = 0
+        do i=1,msh(n)%nelem
+          if(msh(n)%parent(i).ne.i) then
+            isMerged(n) = 1
+            cycle
+          endif
+        enddo
+        call output(n,msh(n))
       enddo
       write(*,*) ' '
       write(*,*) '    isMerged = ',isMerged
@@ -295,7 +306,7 @@ program conservative_overset
       enddo
       call computeMoments(msh(1),mom1(:,1),err(1),nincomp1,elemInfo1)
       call computeMoments(msh(2),mom1(:,2),err(2),nincomp2,elemInfo2)
-      sweep(h,1) = sqrt(sum(err(:)))
+      sweep(h,1) = sum(err(:))
       sweep(h,2) = sum(mom1(1,:))
       sweep(h,3) = sum(mom1(1,:))-sum(mom0(1,:))
       write(*,*) '    Min Rem Frac M1: ',minval(msh(1)%dxcut)/dx(1)
@@ -317,7 +328,7 @@ program conservative_overset
 
     write(*,*) ' '
     write(*,*) 'FINAL SWEEP OUTPUT: '
-    write(*,*) '  H SWEEP L2 ERROR = ',sweep(:,1)
+    write(*,*) '  H SWEEP L2 SQUARED ERROR = ',sweep(:,1)
     write(*,*) '  H SWEEP CONS AREA = ',sweep(:,2)
     write(*,*) '  H SWEEP CONS ERROR = ',sweep(:,3)
     write(*,*) '----------------------------------'

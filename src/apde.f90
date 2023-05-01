@@ -1,12 +1,12 @@
 module pde
   character*20 :: pde_descriptor
   integer, save :: pde_set=0
-  real*8 :: a,mu
+  real*8 :: a,mu,qin,qout
 contains
-  subroutine set_type(pdetype,wavespeed,muinf)
+  subroutine set_type(pdetype,wavespeed,muinf,qA,qB)
     implicit none
     character*(*) :: pdetype
-    real*8, optional, intent(in) :: wavespeed,muinf
+    real*8, optional, intent(in) :: wavespeed,muinf,qA,qB
     write(pde_descriptor,'(A20)') pdetype
     pde_descriptor=trim(adjustl(pde_descriptor))
     if (pde_descriptor .ne. 'linear_advection' .and. & 
@@ -15,17 +15,10 @@ contains
        stop
     endif
     pde_set=1
-    if (present(wavespeed)) then
-       a=wavespeed
-    else
-       a=1d0
-    endif
-    if (present(muinf)) then
-       mu=muinf
-    else
-       mu=0d0
-    endif
-
+    a=wavespeed
+    mu=muinf
+    qin = qA
+    qout = qB
   end subroutine set_type
   !
   subroutine initqleg(msh)
@@ -36,7 +29,7 @@ contains
     real*8,dimension(msh%nshp*msh%nshp) :: L,U
     real*8,dimension(msh%nshp) :: y
     real*8 :: qvals(msh%nshp),dqvals(msh%nshp),f(msh%nshp),tmp,xloc,dx
-
+    !
     ! Use projection to set the IC
     ! int(NaNbub) = int(Na y(x,0))
     ! ub = M^-1 int(Na y(x,0))
@@ -47,8 +40,12 @@ contains
         xloc = (msh%xgauss(j)+0.5d0)*dx + msh%xe(1,i)
 !        tmp = exp(-0.01d0*xloc*xloc)
 !        if (abs(xloc) > 40d0) tmp=0d0
-        tmp = 0.1d0*exp(-20d0*xloc*xloc)
-        if (abs(xloc) > 0.8d0) tmp=0d0
+        if(index(pde_descriptor,'burgers') > 0) then ! burgers
+          tmp = 1d0-tanh((xloc+0.5)/(2*mu))
+        else ! A-D
+          tmp = 0.1d0*exp(-20d0*xloc*xloc)
+          if (abs(xloc) > 0.8d0) tmp=0d0
+        endif
         !tmp = exp(-.010d0*xloc*xloc)
         !if (abs(xloc) > 80d0) tmp=0d0
         qvals = 1d0
@@ -76,13 +73,17 @@ contains
        write(6,*) 'problem type not implemented'
        call exit(1)
     else     
+
+       if(index(pde_descriptor,'burgers') > 0) then ! burgers
+         q=1d0-tanh((x+0.5)/(2*mu))
+       else ! A-D
+         q=exp(-20*x*x)
+         if (abs(x) > 0.8d0) q=0d0
+       endif
+
 !       q = 1d0
 !       if (x < 1d0) q=0d0
 !       if (x > 5d0) q=0d0
-
-
-       q=exp(-20*x*x)
-       if (abs(x) > 0.8d0) q=0d0
 !       q=exp(-0.01*x*x)
 !       if (abs(x) > 40d0) q=0d0
     endif

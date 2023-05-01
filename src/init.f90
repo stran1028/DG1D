@@ -1,3 +1,15 @@
+subroutine initBC(msh)
+  use pde
+  use code_types
+  use bases
+  implicit none
+  type(mesh), intent(inout) :: msh
+  if(index(pde_descriptor,'burgers') > 0) then
+     msh%iBC(1) = 1 ! inflow
+     msh%iBC(msh%nelem) = -1 ! outflow
+  endif
+end subroutine initBC
+!
 subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   !
   use code_types
@@ -14,6 +26,9 @@ subroutine init_mesh(msh,xlim,dx,iperiodic,order)
   !
   msh%nelem=nint((xlim(2)-xlim(1))/dx)
   dxmod=(xlim(2)-xlim(1))/msh%nelem
+  !
+  allocate(msh%iBC(msh%nelem))
+  msh%iBC = 0
   !
   msh%nfields=1
   msh%porder=order

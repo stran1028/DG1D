@@ -15,6 +15,7 @@ module code_types
      integer, allocatable :: iblank(:,:) !< iblank for end-nodes
      integer, allocatable :: child(:) !< child element ID 
      integer, allocatable :: parent(:) !< parent element ID 
+     integer, allocatable :: iBC(:) !< boundary condition array
      !
      real*8, allocatable :: dq(:,:,:)   !< q-variables (nfields,nshp,nelem)
      real*8, allocatable :: q0(:,:,:)   !< intermediate q-variables (nfields,nshp,nelem)
