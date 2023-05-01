@@ -3,6 +3,13 @@ module overset
   use pde
 contains
   !
+  subroutine roundn(in,out,prec)
+    implicit none
+    real*8, intent(in) :: in,prec
+    real*8, intent(inout) :: out
+    out = nint(in/prec)*prec
+  end subroutine roundn
+
   subroutine connect(msh1,msh2)
     implicit none
     type(mesh), intent(inout) :: msh1
@@ -378,7 +385,7 @@ contains
     integer :: i,j,k,e,nrows,aa,bb,cc,eid,index1,pidA
     real*8 :: x1,x2,f1,f2,y1,y2,qA(mshA%nshp),qB(mshB%nshp),xp1,xp2
     real*8 :: xcut(2),xc,lcut,xg,xfac
-    real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp)
+    real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp),ratio
     !
     ! elemInfo = incomplete elements on mesh A
     ! msh = mesh info of mesh B
@@ -417,11 +424,13 @@ contains
                if(consoverset.eq.1) then 
                  elemInfo(2:3,i) = [xcut(2),x2]
                  mshA%dxcut(i) = x2-xcut(2)
-                 if(debug.eq.1) write(*,*) 'Elem ',i,'cut ratio = ',mshA%dxcut(i)/mshA%dx(i)
+                 call roundn(mshA%dxcut(i)/mshA%dx(i),ratio,0.1d0)
+                 if(debug.eq.1) write(*,*) 'Elem ',i,'cut ratio = ',ratio
                else
                  elemInfo(2:3,i) = [x1,x2]
+                 ratio = 1d0
                endif
-               if((mshA%dxcut(i)/mshA%dx(i).le.0.1d0).and.(consoverset.eq.1)) then 
+               if((ratio.le.0.1d0).and.(consoverset.eq.1)) then 
 !               if((consoverset.eq.1)) then 
                  pidA = mshA%face(2,eid)
                  mshA%child(pidA) = eid
@@ -449,10 +458,13 @@ contains
                if(consoverset.eq.1) then 
                  elemInfo(2:3,i) = [x1,xcut(1)]
                  mshA%dxcut(i) = xcut(1)-x1
+                 call roundn(mshA%dxcut(i)/mshA%dx(i),ratio,0.1d0)
+                 if(debug.eq.1) write(*,*) 'Elem ',i,'cut ratio = ',ratio
                else
                  elemInfo(2:3,i) = [x1,x2]
+                 ratio = 1d0
                endif
-               if((mshA%dxcut(i)/mshA%dx(i).le.0.1d0).and.(consoverset.eq.1)) then 
+               if((ratio.le.0.1d0).and.(consoverset.eq.1)) then 
 !               if((consoverset.eq.1)) then 
                  pidA = mshA%face(1,eid)
                  mshA%child(pidA) = eid

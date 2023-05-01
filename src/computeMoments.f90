@@ -9,7 +9,7 @@ subroutine computeMoments(msh,moments,error,nincomp,elemInfo)
  real*8,intent(in) :: elemInfo(3,nincomp)
  type(mesh), intent(inout) :: msh
  real*8, intent(inout) :: moments(2)
- integer :: i,j,k,ndof,eid
+ integer :: i,j,k,ndof,eid,pid
  real*8 :: dxmod,xc,qvals(msh%nshp),dqvals(msh%nshp)
  real*8 :: q0vals(msh%nshp),dq0vals(msh%nshp)
  real*8 ::xlen,xg,exact(1),error(1),tmp
@@ -43,6 +43,7 @@ subroutine computeMoments(msh,moments,error,nincomp,elemInfo)
  do i = 1,nincomp
      ! Get the modified element size
      eid = elemInfo(1,i)
+     pid = msh%parent(eid)
      dxmod = elemInfo(3,i)-elemInfo(2,i)
      xc = 0.5d0*(elemInfo(3,i)+elemInfo(2,i))
 
@@ -52,14 +53,14 @@ subroutine computeMoments(msh,moments,error,nincomp,elemInfo)
      do j = 1,msh%ngauss
        xg = msh%xgauss(j)*dxmod + xc
        qvals = 0d0
-       call shapefunction(msh%nshp,xg,[msh%xe(1,eid),msh%xe(2,eid)],msh%q(1,:,eid),qvals,dqvals)
+       call shapefunction(msh%nshp,xg,[msh%xe(1,pid),msh%xe(2,pid)],msh%q(1,:,pid),qvals,dqvals)
        tmp = tmp+msh%wgauss(j)*sum(qvals)*msh%dx(i)
        moments(1) = moments(1) + msh%wgauss(j)*sum(qvals)*dxmod
        moments(2) = moments(2) + msh%wgauss(j)*sum(qvals)*dxmod*xc
 
        ! exact solution held in q0
        q0vals = 0d0
-       call shapefunction(msh%nshp,xg,[msh%xe(1,eid),msh%xe(2,eid)],msh%q0(1,:,eid),q0vals,dq0vals)
+       call shapefunction(msh%nshp,xg,[msh%xe(1,pid),msh%xe(2,pid)],msh%q0(1,:,pid),q0vals,dq0vals)
        error = error + msh%wgauss(j)*(sum(q0vals)-sum(qvals))**2d0*dxmod
      enddo
  enddo

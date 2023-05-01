@@ -24,7 +24,7 @@ program conservative_overset
   ! Inputs
   cfl = 0.01d0
   ainf = 1d0
-  muinf = 0.01d0
+  muinf = 0.00d0
   !
   ! Set up the problem and bases types
   call set_type('linear_advection',ainf,muinf)
@@ -35,11 +35,10 @@ program conservative_overset
   ieuler = 0
   do conswitch = 1,1    ! cons overset loop 
   do s = 1,1            ! shape function loop
-  do noverlap = 1,3     ! foverlap loop
+  do noverlap = 3,3     ! foverlap loop
   do order = 1,1      ! p-order loop
     sweep = 0d0
 
-    if ((conswitch.eq.0).and.(noverlap.gt.1)) cycle 
 
     write(*,*) '----------------------------------'
     write(*,*) 'INPUTS: '
@@ -59,6 +58,7 @@ program conservative_overset
     elseif(noverlap.eq.3) then 
        foverlap = 1.0d0         ! Fine mesh clips all of overlap
     endif
+    if ((conswitch.eq.0).and.(noverlap.gt.1)) foverlap = 0.0d0
     write(*,*) '    foverlap = ',foverlap
     
     if(s.eq.1) then 
@@ -70,7 +70,7 @@ program conservative_overset
     endif
 
     ! Do a mesh sweep
-    do h = 2,2
+    do h = 1,1
       ! start timer
       call cpu_time(time(1))
       if(h.eq.1) then  
@@ -102,7 +102,7 @@ program conservative_overset
         m2start = -0.5 - dx(2)*.99
       endif
 
-      m2start = -0.5 - dx(2)*.9999 !! stress test w/ 95% cut
+      m2start = -0.5 - dx(2)*.90 !! stress test w/ 90% cut
 !      m2start = -0.5 - dx(2)*.5 !! stress test w/ 95% cut
 !       dx = [1d0,.5d0]
 !       m2start = 1.75d0
