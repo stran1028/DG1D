@@ -112,7 +112,14 @@ contains
 
       flx=flxa-flxd
     else if (index(pde_descriptor,'burgers') > 0) then
-     flx=0.5d0*(0.5d0*(ql*ql+qr*qr)-0.5d0*(ql+qr)*(qr-ql))
+      C11 = 0.0d0
+      C12 = 0.5d0 ! 0.5 dot n-
+      flxa = 0.5d0*(0.5d0*(ql*ql+qr*qr)-0.5d0*(ql+qr)*(qr-ql))
+!      flxd = mu*(0.5d0*(dql+dqr) + C11*(ql-qr) - C12*(dql-dqr))
+      !flxd = mu*0.5d0*(dql+dqr)
+!flxa = 0.5d0*0.5d0*(ql*ql+qr*qr)
+flxd = 0.5d0*mu*(dql+dqr)
+      flx=flxa-flxd
     endif
   end subroutine flux
   !
@@ -126,7 +133,7 @@ contains
     if (index(pde_descriptor,'linear_advection') > 0 ) then
      vol=a*qtmp - mu*dqtmp
     else if (index(pde_descriptor,'burgers') > 0) then
-     vol=0.5*qtmp*qtmp
+     vol=0.5*qtmp*qtmp - mu*dqtmp
     endif
   end subroutine volint
   !

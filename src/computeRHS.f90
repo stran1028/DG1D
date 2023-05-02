@@ -70,14 +70,14 @@ subroutine computeRHS(msh,isupg,dt)
           if(msh%iBC(i).eq.0) then 
             call shapefunction(msh%nshp,msh%xe(2,e1),msh%xe(:,e1),msh%q(1,:,e1),qvals,dqvals)
             ql = sum(qvals)
-            dql = sum(dqvals)
+            dql = sum(dqvals)/msh%dx(i)
           else if(msh%iBC(i).eq.1) then ! inflow
             ql = qin
             dql = 0d0
           endif
           call shapefunction(msh%nshp,msh%xe(1,i),msh%xe(:,i),msh%q(1,:,i),qvals,dqvals)
           qr = sum(qvals)
-          dqr = sum(dqvals)
+          dqr = sum(dqvals)/msh%dx(i)
           call flux(ql,qr,dql,dqr,flx)
           do j = 1,msh%nshp
               msh%rhs(:,j,i) = msh%rhs(:,j,i) + w(j)*flx
@@ -91,11 +91,11 @@ subroutine computeRHS(msh,isupg,dt)
           call shapefunction(msh%nshp,0.5d0,[-0.5d0,0.5d0],qvals,w,dqvals)
           call shapefunction(msh%nshp,msh%xe(2,i),msh%xe(:,i),msh%q(1,:,i),qvals,dqvals)
           ql = sum(qvals)
-          dql = sum(dqvals)
+          dql = sum(dqvals)/msh%dx(i)
           if(msh%iBC(i).eq.0) then 
             call shapefunction(msh%nshp,msh%xe(1,e2),msh%xe(:,e2),msh%q(1,:,e2),qvals,dqvals)
             qr = sum(qvals)
-            dqr = sum(dqvals)
+            dqr = sum(dqvals)/msh%dx(i)
           else if(msh%iBC(i).eq.-1) then ! outflow
             qr = qout
             dqr = 0d0

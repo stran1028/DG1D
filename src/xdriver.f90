@@ -24,21 +24,21 @@ program conservative_overset
   ! Inputs
   cfl = 0.01d0
   ainf = 2d0
-  muinf = 0.00d0
-  q1 = 1d0
+  muinf = 0.02d0
+  q1 = 2d0
   qN = 0d0
   !
   ! Set up the problem and bases types
-  call set_type('linear_advection',ainf,muinf,q1,qN)
-!  call set_type('burgers',ainf,muinf,q1,qN)
+!  call set_type('linear_advection',ainf,muinf,q1,qN)
+  call set_type('burgers',ainf,muinf,q1,qN)
   ilim = 0      ! flag to control slope limiting
   isupg = 0  ! supg flag
   ireg = 0 ! regularization flag
   ieuler = 0
-  do conswitch = 0,1    ! cons overset loop 
+  do conswitch = 0,0    ! cons overset loop 
   do s = 1,1            ! shape function loop
-  do noverlap = 3,3     ! foverlap loop
-  do order = 1,5      ! p-order loop
+  do noverlap = 1,1     ! foverlap loop
+  do order = 1,1      ! p-order loop
     sweep = 0d0
 
     write(*,*) '----------------------------------'
@@ -71,7 +71,7 @@ program conservative_overset
     endif
 
     ! Do a mesh sweep
-    do h = 1,5
+    do h = 4,4
       ! start timer
       call cpu_time(time(1))
       if(h.eq.1) then  
@@ -90,27 +90,27 @@ program conservative_overset
       ! DEBUG, do an overlap sweep with a constant mesh size
 !      dx = [0.25d0,0.125d0]
       if(h.eq.1) then  
-        m2start = -0.5 - dx(2)*.25
+        m2start = -0.25 - dx(2)*.25
       elseif(h.eq.2) then  
-        m2start = -0.5 - dx(2)*.50
+        m2start = -0.25 - dx(2)*.50
       elseif(h.eq.3) then 
-        m2start = -0.5 - dx(2)*.75
+        m2start = -0.25 - dx(2)*.75
       elseif(h.eq.4) then 
-        m2start = -0.5 - dx(2)*.90
+        m2start = -0.25 - dx(2)*.90
       elseif(h.eq.5) then 
-        m2start = -0.5 - dx(2)*.95
+        m2start = -0.25 - dx(2)*.95
       elseif(h.eq.6) then 
-        m2start = -0.5 - dx(2)*.99
+        m2start = -0.25 - dx(2)*.99
       endif
 
-      m2start = -0.5 - dx(2)*.90 !! stress test w/ 90% cut
+      m2start = -0.25 - dx(2)*.99 !! stress test w/ 90% cut
 !      m2start = -0.5 - dx(2)*.5 !! stress test w/ 95% cut
 !       dx = [1d0,.5d0]
 !       m2start = 1.75d0
 
       ! Compute parameters
       dt=cfl*minval(dx)/ainf
-      ntime = 1.*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
+      ntime = 400!1.*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
       write(*,*) ' '
       write(*,*) '    ainf, muinf = ',ainf,muinf
       if (index(pde_descriptor,'burgers') > 0) write(*,*) '    q1, qN = ',q1,qN  
