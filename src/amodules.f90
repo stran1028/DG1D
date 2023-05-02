@@ -18,7 +18,7 @@ module code_types
      integer, allocatable :: iBC(:) !< boundary condition array
      !
      real*8, allocatable :: dq(:,:,:)   !< q-variables (nfields,nshp,nelem)
-     real*8, allocatable :: q0(:,:,:)   !< intermediate q-variables (nfields,nshp,nelem)
+     real*8, allocatable :: qexact(:,:,:)   !< exact solution
      real*8, allocatable :: q(:,:,:)   !< intermediate q-variables (nfields,nshp,nelem)
      real*8, allocatable :: qold(:,:,:)   !< intermediate q-variables (nfields,nshp,nelem)
      real*8, allocatable :: vlim(:,:,:)   !< limited q-variables (nfields,nshp,nelem)

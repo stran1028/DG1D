@@ -35,14 +35,14 @@ subroutine output(iout,msh)
 
          call shapefunction(msh%nshp,xloc,[msh%xe(1,i),msh%xe(2,i)],msh%sol(1,:,i),qtmp,dqtmp)
          q1 = sum(qtmp)
-         call shapefunction(msh%nshp,xloc,[msh%xe(1,i),msh%xe(2,i)],msh%q0(1,:,i),qtmp,dqtmp)
+         call shapefunction(msh%nshp,xloc,[msh%xe(1,i),msh%xe(2,i)],msh%qexact(1,:,i),qtmp,dqtmp)
          ic = sum(qtmp)
          error = q1-ic
          write(12,*) xloc,q1, error,bound
 
 !         call shapefunction(msh%nshp,msh%x(msh%e2n(j,i)),[msh%xe(1,i),msh%xe(2,i)],msh%sol(1,:,i),qtmp,dqtmp)
 !         q1 = sum(qtmp)
-!         error = msh%q0(1,j,i)-q1
+!         error = msh%qexact(1,j,i)-q1
 !         write(12,*) msh%x(msh%e2n(j,i)),q1, error
       enddo
 

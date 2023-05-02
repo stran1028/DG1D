@@ -85,32 +85,11 @@ program conservative_overset
       elseif(h.eq.5) then 
         dx = [0.015625d0,0.0078125d0]
       endif
-!dx = 0.025d0
-
-      ! DEBUG, do an overlap sweep with a constant mesh size
-!      dx = [0.25d0,0.125d0]
-      if(h.eq.1) then  
-        m2start = -0.25 - dx(2)*.25
-      elseif(h.eq.2) then  
-        m2start = -0.25 - dx(2)*.50
-      elseif(h.eq.3) then 
-        m2start = -0.25 - dx(2)*.75
-      elseif(h.eq.4) then 
-        m2start = -0.25 - dx(2)*.90
-      elseif(h.eq.5) then 
-        m2start = -0.25 - dx(2)*.95
-      elseif(h.eq.6) then 
-        m2start = -0.25 - dx(2)*.99
-      endif
-
       m2start = -0.25 - dx(2)*.99 !! stress test w/ 90% cut
-!      m2start = -0.5 - dx(2)*.5 !! stress test w/ 95% cut
-!       dx = [1d0,.5d0]
-!       m2start = 1.75d0
 
       ! Compute parameters
       dt=cfl*minval(dx)/ainf
-      ntime = 400!1.*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
+      ntime = 1600!1.*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
       write(*,*) ' '
       write(*,*) '    ainf, muinf = ',ainf,muinf
       if (index(pde_descriptor,'burgers') > 0) write(*,*) '    q1, qN = ',q1,qN  
@@ -122,21 +101,12 @@ program conservative_overset
       write(*,*) '    dt = ',dt
       write(*,*) '    ntime = ',ntime
       !
+      !-------------------------
       ! Initialize the mesh(es)
-!      call init_mesh(msh(1),[0d0,8d0],dx(1),1,order)
-!      call init_mesh(msh(2),[m2start,m2start+2d0],dx(2),0,order)
+      !-------------------------
       call init_mesh(msh(1),[-1d0,1d0],dx(1),1,order)
       call init_mesh(msh(2),[m2start,m2start+0.75d0],dx(2),0,order)
-!      call init_mesh(msh(2),[-0.268d0,0.732d0],dx(2),0,order)
-      !
-      ! init BC
-      call initBC(msh(1))
-      !
-      ! init q
-      do n=1,nmesh
-       call initvar(msh(n))
-       msh(n)%sol=msh(n)%q
-      enddo
+      call initBC(msh(1)) ! only call for msh1 b/c it's the outside mesh
       !
       ! Blank out coarser overlapping cells 
       if(nmesh>1) then 
@@ -145,6 +115,7 @@ program conservative_overset
         call fixOverlap(msh(2),msh(1))
         call findIncompleteElements(msh(1),elemInfo1,nincomp1)
         call findIncompleteElements(msh(2),elemInfo2,nincomp2)
+
         ! cut mass matrices and merge cells if needed
         debug = 0      
         call fixMassIncompleteElements(msh(1),msh(2),elemInfo2,nincomp2,&
@@ -152,21 +123,10 @@ program conservative_overset
         debug = 0
         call fixMassIncompleteElements(msh(2),msh(1),elemInfo1,nincomp1,&
                 consoverset,foverlap,debug)      
-        ! project solution to merged cells
-        if(consoverset.eq.1) then
-           call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%q)
-           call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%q)
-        endif
-      end if
+      endif
       !
-      ! Store initial conditions (exact solution)
-      msh(1)%qold = msh(1)%q 
-      msh(2)%qold = msh(2)%q 
-      msh(1)%q0 = msh(1)%q 
-      msh(2)%q0 = msh(2)%q 
-      !
+      ! check if cells are merged or not
       do n=1,nmesh
-        ! check if cells are merged or not
         isMerged(n) = 0
         do i=1,msh(n)%nelem
           if(msh(n)%parent(i).ne.i) then
@@ -174,17 +134,41 @@ program conservative_overset
             cycle
           endif
         enddo
-        call output(n,msh(n))
       enddo
       write(*,*) ' '
       write(*,*) '    isMerged = ',isMerged
+      !
+      ! init q at t=0 
+      do n=1,nmesh
+        call initvar(msh(n),msh(n)%q,0)
+        msh(n)%sol=msh(n)%q
+      enddo
+      if((nmesh>1).and.(consoverset.eq.1)) then
+        call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%q)
+        call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%q)
+        msh(1)%qold = msh(1)%q 
+        msh(2)%qold = msh(2)%q 
+      endif
+      !
+      ! find exact solution f q at t=ntime*dt
+      do n=1,nmesh
+       call initvar(msh(n),msh(n)%qexact,ntime*dt)
+      enddo
+      if((nmesh>1).and.(consoverset.eq.1)) then
+        call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%qexact)
+        call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%qexact)
+      endif
       call computeMoments(msh(1),mom0(:,1),err(1),nincomp1,elemInfo1)
       call computeMoments(msh(2),mom0(:,2),err(2),nincomp2,elemInfo2)
-
+      do n=1,nmesh
+        call output(n,msh(n))
+      enddo
       write(*,*) ' '
       write(*,*) '    Initial Area Under Curve: ', sum(mom0(1,:))
 
+      !-----------------------
       ! Iterate in time
+      !-----------------------
       rk = [1d0/4d0, 8d0/15d0,5d0/12d0, 3d0/4d0];
       do i=1,ntime
 !       write(*,*) '--------------------------'

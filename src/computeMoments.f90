@@ -35,7 +35,7 @@ subroutine computeMoments(msh,moments,error,nincomp,elemInfo)
  
        ! exact solution held in q0
        q0vals = 0d0
-       call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],msh%q0(1,:,i),q0vals,dq0vals)
+       call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],msh%qexact(1,:,i),q0vals,dq0vals)
        error = error + msh%wgauss(j)*(sum(q0vals)-sum(qvals))**2d0*msh%dx(i)
      enddo
  enddo
@@ -60,7 +60,7 @@ subroutine computeMoments(msh,moments,error,nincomp,elemInfo)
 
        ! exact solution held in q0
        q0vals = 0d0
-       call shapefunction(msh%nshp,xg,[msh%xe(1,pid),msh%xe(2,pid)],msh%q0(1,:,pid),q0vals,dq0vals)
+       call shapefunction(msh%nshp,xg,[msh%xe(1,pid),msh%xe(2,pid)],msh%qexact(1,:,pid),q0vals,dq0vals)
        error = error + msh%wgauss(j)*(sum(q0vals)-sum(qvals))**2d0*dxmod
      enddo
  enddo

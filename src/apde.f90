@@ -21,14 +21,15 @@ contains
     qout = qB
   end subroutine set_type
   !
-  subroutine initqleg(msh)
+  subroutine initqleg(msh,q,t)
     use code_types
     use bases
     type(mesh), intent(inout)::msh
     integer i,j,k
+    real*8, intent(inout) :: q(msh%nfields,msh%nshp,msh%nelem)
     real*8,dimension(msh%nshp*msh%nshp) :: L,U
     real*8,dimension(msh%nshp) :: y
-    real*8 :: qvals(msh%nshp),dqvals(msh%nshp),f(msh%nshp),tmp,xloc,dx
+    real*8 :: qvals(msh%nshp),dqvals(msh%nshp),f(msh%nshp),tmp,xloc,dx,t
     !
     ! Use projection to set the IC
     ! int(NaNbub) = int(Na y(x,0))
@@ -38,16 +39,13 @@ contains
       f = 0.0d0
       do j = 1,msh%ngauss
         xloc = (msh%xgauss(j)+0.5d0)*dx + msh%xe(1,i)
-!        tmp = exp(-0.01d0*xloc*xloc)
-!        if (abs(xloc) > 40d0) tmp=0d0
         if(index(pde_descriptor,'burgers') > 0) then ! burgers
-          tmp = 1d0-tanh((xloc+0.5)/(2*mu))
+          tmp = 1d0-tanh((xloc+0.5-t)/(2*mu))
         else ! A-D
+          xloc = mod(1d0+xloc-t*a,2d0)-1d0
           tmp = 0.1d0*exp(-20d0*xloc*xloc)
           if (abs(xloc) > 0.8d0) tmp=0d0
         endif
-        !tmp = exp(-.010d0*xloc*xloc)
-        !if (abs(xloc) > 80d0) tmp=0d0
         qvals = 1d0
         call shapefunction(msh%nshp,msh%xgauss(j),[-0.5d0,0.5d0],qvals,qvals,dqvals)
         do k = 1,msh%nshp
@@ -58,26 +56,27 @@ contains
       ! solve the elementary system for u
       call lu(msh%mass(1,:,i),msh%nshp,L,U)
       call forwprop(L,f,msh%nshp,y)
-      call backprop(U,y,msh%nshp,msh%q(1,:,i))
+      call backprop(U,y,msh%nshp,q(1,:,i))
 
     enddo
   end subroutine initqleg
   !
-  subroutine initq(x,q)
+  subroutine initq(x,q,t)
     implicit none
-    real*8, intent(in) :: x
+    real*8, intent(in) :: x,t
     real*8, intent(out) :: q(:)
+    real*8 :: xx
 
     if ((index(pde_descriptor,'linear_advection') .le. 0) .and. &
         (index(pde_descriptor, 'burgers') .le. 0)) then
        write(6,*) 'problem type not implemented'
        call exit(1)
     else     
-
        if(index(pde_descriptor,'burgers') > 0) then ! burgers
-         q=1d0-tanh((x+0.5)/(2*mu))
+         q=1d0-tanh((x+0.5-t)/(2*mu))
        else ! A-D
-         q=exp(-20*x*x)
+         xx = mod(1d0+x-t*a,2d0)-1d0 ! assume periodic domain size 2
+         q=exp(-20*xx*xx)
          if (abs(x) > 0.8d0) q=0d0
        endif
 
@@ -116,9 +115,7 @@ contains
       C12 = 0.5d0 ! 0.5 dot n-
       flxa = 0.5d0*(0.5d0*(ql*ql+qr*qr)-0.5d0*(ql+qr)*(qr-ql))
 !      flxd = mu*(0.5d0*(dql+dqr) + C11*(ql-qr) - C12*(dql-dqr))
-      !flxd = mu*0.5d0*(dql+dqr)
-!flxa = 0.5d0*0.5d0*(ql*ql+qr*qr)
-flxd = 0.5d0*mu*(dql+dqr)
+      flxd = 0.5d0*mu*(dql+dqr)
       flx=flxa-flxd
     endif
   end subroutine flux
@@ -136,5 +133,5 @@ flxd = 0.5d0*mu*(dql+dqr)
      vol=0.5*qtmp*qtmp - mu*dqtmp
     endif
   end subroutine volint
-  !
+  ! 
 end module pde

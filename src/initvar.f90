@@ -1,4 +1,4 @@
-subroutine initvar(msh)
+subroutine initvar(msh,vec,t)
   !
   use code_types
   use pde
@@ -6,22 +6,24 @@ subroutine initvar(msh)
   implicit none
   !
   type(mesh), intent(inout) :: msh
+  real*8, intent(inout) :: vec(msh%nfields,msh%nshp,msh%nelem)
+  real*8, intent(in) :: t
   integer :: i,j
-  real*8 :: xc,xx,dx
+  real*8 :: xx
+  real*8 :: tmp(msh%nfields,msh%nshp,msh%nelem)
   !
   do i=1,msh%nelem
-     xc=(msh%xe(1,i)+msh%xe(2,i))*0.5d0
-     dx=msh%xe(2,i)-msh%xe(1,i)
-
      do j=1,msh%nshp
-        xx = msh%x(msh%e2n(j,i))
         if(shptype.eq.'legendre') then 
-          call initqleg(msh)
+          call initqleg(msh,tmp,t)
         else 
-          call initq(xx,msh%q(:,j,i))
+          xx = msh%x(msh%e2n(j,i))
+          call initq(xx,tmp(:,j,i),t)
         endif
      enddo
   enddo
-  msh%sol = msh%q
+  !
+  ! Copy over to output
+  vec = tmp
   !
 end subroutine initvar
