@@ -107,15 +107,15 @@ contains
       C12 = 0.5d0 ! 0.5 dot n-
 
       flxa=a*(0.5d0*(ql+qr) + C12*(ql-qr) )
-      flxd = mu*(0.5d0*(dql+dqr) + C11*(ql-qr) - C12*(dql-dqr))
+      flxd = mu*(0.5d0*(dql+dqr) + C11*(ql-qr) - C12*(dql-dqr)) ! LDG method
 
       flx=flxa-flxd
     else if (index(pde_descriptor,'burgers') > 0) then
       C11 = 0.0d0
       C12 = 0.5d0 ! 0.5 dot n-
       flxa = 0.5d0*(0.5d0*(ql*ql+qr*qr)-0.5d0*(ql+qr)*(qr-ql))
-!      flxd = mu*(0.5d0*(dql+dqr) + C11*(ql-qr) - C12*(dql-dqr))
-      flxd = 0.5d0*mu*(dql+dqr)
+      flxd = mu*(0.5d0*(dql+dqr) + C11*(ql-qr) - C12*(dql-dqr)) ! LDG method
+!      flxd = 0.5d0*mu*(dql+dqr)
       flx=flxa-flxd
     endif
   end subroutine flux
