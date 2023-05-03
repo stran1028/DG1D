@@ -224,10 +224,10 @@ contains
                call shapefunction(mshA%nshp,xcut(2),[xp1,xp2],wtmp,wtmp,dwtmp)
                call shapefunction(mshB%nshp,xcut(2),[yp1,yp2],qB,qtmp,dqtmp)
                qL = sum(qtmp)
-               dqL = sum(dqtmp)
+               dqL = sum(dqtmp)/mshB%dx(pidB)
                call shapefunction(mshA%nshp,xcut(2),[xp1,xp2],qA,qtmp,dqtmp)
                qR = sum(qtmp)
-               dqR = sum(dqtmp)
+               dqR = sum(dqtmp)/mshA%dx(pidA)
                call flux(qL,qR,dqL,dqR,flx)
                do k = 1,mshA%nshp
                  mshA%rhs(:,k,pidA) = mshA%rhs(:,k,pidA) + wtmp(k)*flx
@@ -237,14 +237,14 @@ contains
                if(pidA.eq.eid) then ! only do if not using cell agglomeration
                  ! Handle mesh A R node flux
                  wtmp = 1d0
-                 call shapefunction(mshA%nshp,x2,[x1,x2],wtmp,wtmp,dwtmp)
+                 call shapefunction(mshA%nshp,x2,[xp1,xp2],wtmp,wtmp,dwtmp)
                  neigh = mshA%face(2,eid)
                  call shapefunction(mshA%nshp,x2,[xp1,xp2],qA,qtmp,dqtmp)
                  qL = sum(qtmp)
-                 dqL = sum(dqtmp)
+                 dqL = sum(dqtmp)/mshA%dx(pidA)
                  call shapefunction(mshA%nshp,x2,mshA%xe(:,neigh),mshA%q(1,:,neigh),qtmp,dqtmp)
                  qR = sum(qtmp)
-                 dqR = sum(dqtmp)
+                 dqR = sum(dqtmp)/mshA%dx(neigh)
                  call flux(qL,qR,dqL,dqR,flx)
                  do k = 1,mshA%nshp
                    mshA%rhs(:,k,pidA) = mshA%rhs(:,k,pidA) - wtmp(k)*flx
@@ -278,14 +278,14 @@ contains
                if(pidA.eq.eid) then ! only do if not using cell agglomeration
                  ! Handle mesh A L node flux 
                  wtmp = 1d0
-                 call shapefunction(mshA%nshp,x1,[x1,x2],wtmp,wtmp,dwtmp)
+                 call shapefunction(mshA%nshp,x1,[xp1,xp2],wtmp,wtmp,dwtmp)
                  neigh = mshA%face(1,eid)
                  call shapefunction(mshA%nshp,x1,mshA%xe(:,neigh),mshA%q(1,:,neigh),qtmp,dqtmp)
                  qL = sum(qtmp)
-                 dqL = sum(dqtmp)
-                 call shapefunction(mshA%nshp,x1,[x1,x2],qA,qtmp,dqtmp)
+                 dqL = sum(dqtmp)/mshA%dx(neigh)
+                 call shapefunction(mshA%nshp,x1,[xp1,xp2],qA,qtmp,dqtmp)
                  qR = sum(qtmp)
-                 dqR = sum(dqtmp)
+                 dqR = sum(dqtmp)/mshA%dx(pidA)
                  call flux(qL,qR,dqL,dqR,flx)
                  do k = 1,mshA%nshp
                    mshA%rhs(:,k,pidA) = mshA%rhs(:,k,pidA) + wtmp(k)*flx
@@ -299,10 +299,10 @@ contains
                call shapefunction(mshA%nshp,xcut(1),[xp1,xp2],wtmp,wtmp,dwtmp)
                call shapefunction(mshB%nshp,xcut(1),[y1,y2],qB,qtmp,dqtmp)
                qR = sum(qtmp)
-               dqR = sum(dqtmp)
+               dqR = sum(dqtmp)/mshB%dx(pidB)
                call shapefunction(mshA%nshp,xcut(1),[xp1,xp2],qA,qtmp,dqtmp)
                qL = sum(qtmp)
-               dqL = sum(dqtmp)
+               dqL = sum(dqtmp)/mshA%dx(pidA)
                call flux(ql,qr,dql,dqr,flx)
                do k = 1,mshA%nshp
                  mshA%rhs(:,k,pidA) = mshA%rhs(:,k,pidA) - wtmp(k)*flx
@@ -322,7 +322,7 @@ contains
                call shapefunction(mshA%nshp,xg,[xp1,xp2],wtmp,wtmp,dwtmp)
                call shapefunction(mshA%nshp,xg,[xp1,xp2],qA,qtmp,dqtmp)
                qval = sum(qtmp)
-               dqval = sum(dqtmp)/mshA%dx(pidA)
+               dqval = sum(dqtmp)/mshA%dx(pidA) 
                call volint(qval,dqval,vol)
                do bb = 1,mshA%nshp
                  ! Volume Integral

@@ -6,7 +6,7 @@ program conservative_overset
   use slopelimiter
   implicit none
   !
-  integer, parameter :: nmesh=2
+  integer, parameter :: nmesh=1
   integer :: i,s,ntime,n,j,k,m,order,consoverset,ilim,ieuler, isupg, ireg
   real*8 :: dt,mom1(2,nmesh),mom0(2,nmesh)
   real*8 :: err(nmesh)
@@ -38,7 +38,7 @@ program conservative_overset
   do conswitch = 0,0    ! cons overset loop 
   do s = 1,1            ! shape function loop
   do noverlap = 1,1     ! foverlap loop
-  do order = 1,1      ! p-order loop
+  do order = 4,4      ! p-order loop
     sweep = 0d0
 
     write(*,*) '----------------------------------'
@@ -71,25 +71,28 @@ program conservative_overset
     endif
 
     ! Do a mesh sweep
-    do h = 4,4
+    do h = 2,2
       ! start timer
       call cpu_time(time(1))
       if(h.eq.1) then  
-        dx = [0.25d0,0.125d0]
+!        dx = [0.25d0,0.125d0]
       elseif(h.eq.2) then 
-        dx = [0.125d0,0.0625d0]
+!        dx = [0.125d0,0.0625d0]
       elseif(h.eq.3) then 
-        dx = [0.0625d0,0.03125d0]
+!        dx = [0.0625d0,0.03125d0]
       elseif(h.eq.4) then 
-        dx = [0.03125d0,0.015625d0]
+!        dx = [0.03125d0,0.015625d0]
       elseif(h.eq.5) then 
-        dx = [0.015625d0,0.0078125d0]
+!        dx = [0.015625d0,0.0078125d0]
       endif
-      m2start = -0.25 - dx(2)*.99 !! stress test w/ 90% cut
+!      m2start = -0.25 - dx(2)*.99 !! stress test w/ 90% cut
+     dx = 0.125d0
 
       ! Compute parameters
       dt=cfl*minval(dx)/ainf
-      ntime = 1600!1.*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
+      ntime = 60
+!      ntime = nint(1.25d0/dt) ! T = 1.25 seconds for Burgers
+!      ntime = 1.*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
       write(*,*) ' '
       write(*,*) '    ainf, muinf = ',ainf,muinf
       if (index(pde_descriptor,'burgers') > 0) write(*,*) '    q1, qN = ',q1,qN  
@@ -105,7 +108,7 @@ program conservative_overset
       ! Initialize the mesh(es)
       !-------------------------
       call init_mesh(msh(1),[-1d0,1d0],dx(1),1,order)
-      call init_mesh(msh(2),[m2start,m2start+0.75d0],dx(2),0,order)
+!      call init_mesh(msh(2),[m2start,m2start+0.75d0],dx(2),0,order)
       call initBC(msh(1)) ! only call for msh1 b/c it's the outside mesh
       !
       ! Blank out coarser overlapping cells 
@@ -158,8 +161,8 @@ program conservative_overset
         call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%qexact)
         call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%qexact)
       endif
-      call computeMoments(msh(1),mom0(:,1),err(1),nincomp1,elemInfo1)
-      call computeMoments(msh(2),mom0(:,2),err(2),nincomp2,elemInfo2)
+!      call computeMoments(msh(1),mom0(:,1),err(1),nincomp1,elemInfo1)
+!      call computeMoments(msh(2),mom0(:,2),err(2),nincomp2,elemInfo2)
       do n=1,nmesh
         call output(n,msh(n))
       enddo
@@ -275,12 +278,13 @@ program conservative_overset
               msh(1)%sol = msh(1)%vlim
             endif
           endif
-          msh(1)%q = msh(1)%sol
-          msh(2)%q = msh(2)%sol
+
+          do n = 1,nmesh
+            msh(n)%q = msh(n)%sol
   
-          ! copy over curr q values to qold
-          msh(1)%qold = msh(1)%q
-          msh(2)%qold = msh(2)%q
+            ! copy over curr q values to qold
+            msh(n)%qold = msh(n)%q
+          enddo
         endif ! Euler or RK
       enddo ! timesteps
       
@@ -288,20 +292,20 @@ program conservative_overset
       do n=1,nmesh
         call output(nmesh+n,msh(n))
       enddo
-      call computeMoments(msh(1),mom1(:,1),err(1),nincomp1,elemInfo1)
-      call computeMoments(msh(2),mom1(:,2),err(2),nincomp2,elemInfo2)
-      sweep(h,1) = sum(err(:))
-      sweep(h,2) = sum(mom1(1,:))
-      sweep(h,3) = sum(mom1(1,:))-sum(mom0(1,:))
-      write(*,*) '    Min Rem Frac M1: ',minval(msh(1)%dxcut)/dx(1)
-      write(*,*) '    Min Rem Frac M2: ',minval(msh(2)%dxcut)/dx(2)
+!      call computeMoments(msh(1),mom1(:,1),err(1),nincomp1,elemInfo1)
+!      call computeMoments(msh(2),mom1(:,2),err(2),nincomp2,elemInfo2)
+!      sweep(h,1) = sum(err(:))
+!      sweep(h,2) = sum(mom1(1,:))
+!      sweep(h,3) = sum(mom1(1,:))-sum(mom0(1,:))
+!      write(*,*) '    Min Rem Frac M1: ',minval(msh(1)%dxcut)/dx(1)
+!      write(*,*) '    Min Rem Frac M2: ',minval(msh(2)%dxcut)/dx(2)
       
       ! Clear memory
       do n = 1,nmesh
         call clearMem(msh(n))
       enddo
       if (allocated(elemInfo1)) deallocate(elemInfo1)
-      if (allocated(elemInfo2)) deallocate(elemInfo2)
+!      if (allocated(elemInfo2)) deallocate(elemInfo2)
 
       ! call timer
       call cpu_time(time(2))
