@@ -119,13 +119,6 @@ contains
     call shapefunction(mshA%nshp,xloc,mshA%xe(:,eidA),mshA%q(1,:,eidA),qAvals,dqAvals)
     qA = sum(qAvals)
     dqA = sum(dqAvals)/mshA%dx(eidA)
-    if((mshA%iBC(eidA).eq.1).and.(xloc.eq.mshA%xe(1,eidA))) then ! inflow
-      qA = qin
-      dqA = 0d0
-    else if((mshA%iBC(eidA).eq.-1).and.(xloc.eq.mshA%xe(2,eidA))) then ! outflow
-      qA = qout
-      dqA = 0d0
-    endif
 
     ! adjust xloc for periodic neighbor eidB
     if((eidA.eq.1).and.(xloc.eq.mshA%xe(1,eidA))) then
@@ -143,10 +136,12 @@ contains
     call shapefunction(mshB%nshp,xB,mshB%xe(:,eidB),mshB%q(1,:,eidB),qBvals,dqBvals)
     qB = sum(qBvals)
     dqB = sum(dqBvals)/mshB%dx(eidB)
-    if((mshB%iBC(eidB).eq.1).and.(xloc.eq.mshB%xe(1,eidB))) then ! inflow
+
+    ! handle BC's
+    if((mshA%iBC(eidA).eq.1).and.(xloc.eq.mshA%xe(1,eidA))) then ! inflow
       qB = qin
       dqB = 0d0
-    else if((mshB%iBC(eidB).eq.-1).and.(xloc.eq.mshB%xe(2,eidB))) then ! outflow
+    else if((mshA%iBC(eidA).eq.-1).and.(xloc.eq.mshA%xe(2,eidA))) then ! outflow
       qB = qout
       dqB = 0d0
     endif
@@ -170,15 +165,19 @@ contains
 
     ! Advective fluxes
     if (index(pde_descriptor,'linear_advection') > 0 ) then
-      ! LDG method
-      C11 = 0.0d0
-      C12 = 0.5d0*nA ! 0.5 dot n-
-      flxa=wAvals*(a*(0.5d0*(qA+qB) + C12*(qA-qB)))
+!      ! LDG method
+!      C11 = 0.0d0
+!      C12 = 0.5d0*nA ! 0.5 dot n-
+!      flxa=wAvals*(a*(0.5d0*(qA+qB) + C12*(qA-qB)))
+
+       ! IP and BR2
+       flxa=wAvals*a*0.5d0*(qA+qB)
     else if (index(pde_descriptor,'burgers') > 0) then
       ! LDG method
       C11 = 0.0d0
       C12 = 0.5d0*nA ! 0.5 dot n-
-      flxa = wAvals*(0.5d0*(0.5d0*(qA*qA+qB*qB)-0.5d0*(qA+qB)*(qB-qA)))
+      flxa = (0.5d0*(0.5d0*(qA*qA+qB*qB)-C12*(qA+qB)*(qB-qA)))
+      flxA = wAvals*flxa
 
       ! IP or BR2 symmetric adv flux
       ! flxa = wAvals*0.5d0*(0.5d0*(qA*qA+qB*qB))
@@ -191,24 +190,36 @@ contains
       C12 = 0.5d0 ! 0.5 dot n-
 
       flxd = wAvals*mu*(0.5d0*(dqA+dqB) + C11*(qA-qB) - C12*(dqA-dqB)) ! LDG method
-    else if (index(pde_descriptor,'burgers') > 0) then
-      ! Advective Flux
-      ! Lax Friedrich
-      C11 = 0.0d0
-      C12 = 0.5d0 ! 0.5 dot n-
-      flxa = wAvals*0.5d0*(0.5d0*(qA*qA+qB*qB)-0.5d0*(qA+qB)*(qB-qA))
 
       ! Arnold/Shabazi Interior Penalty:
       C11 = (porder+1d0)*(porder+1d0)/2d0 ! Shabazi penalty constant
       C11 = C11/(mshA%dx(eidA))
+      write(*,*) 'C11 = ',C11 
+
+      flxd = 0.5d0*(dqA+dqB) - C11*(qA*nA+qB*nB)
+      flxd = wAvals*mu*flxd
+ 
+!      flxd = 0.5d0*(dqAvals+dqBvals)*(wA*nA+wB*nB)
+!      flxd = flxd + 0.5d0*(dwAvals+dwBvals)*(qA*nA+qB*nB)
+!      flxd = flxd - wAvals*C11*(qA*nA+qB*nB)*(wA*nA+wB*nB) ! penalty term
+      
+    else if (index(pde_descriptor,'burgers') > 0) then
+      ! Arnold/Shabazi Interior Penalty:
+      C11 = (porder+1d0)*(porder+1d0)/2d0 ! Shabazi penalty constant
+      C11 = C11/(mshA%dx(eidA))
        
+      flxd = 0.5d0*(dqA+dqB) - C11*(qA*nA+qB*nB)
+      flxd = wAvals*mu*flxd
 !      flxd = 0.5d0*(dqAvals+dqBvals)*(wA*nA+wB*nB)
 !      flxd = flxd + 0.5d0*(dwAvals+dwBvals)*(qA*nA+qB*nB)
 !      flxd = flxd - wAvals*C11*(qA*nA+qB*nB)*(wA*nA+wB*nB) ! penalty term
 
       ! LDG according to Persson DG School
       ! works best so far except on fine meshes & p>4
-      flxd = wAvals*mu*(0.5d0*(dqA+dqB) + C11*(qA-qB) - C12*(dqA-dqB)) ! LDG method
+!      C11 = 0.0d0*nA
+!      C12 = 0.5d0*nA ! 0.5 dot n-
+!      flxd = mu*(0.5d0*(dqA+dqB) + C11*(qA-qB) - C12*(dqA-dqB)) ! LDG method
+!      flxd = wAvals*flxd
 
       ! Westhaven and Warburton:
 
@@ -218,17 +229,6 @@ contains
  
     ! Final Flux
     flx=flxa-flxd
-!write(*,*) '  flux2: ',eidA,xloc
-!write(*,*) '    A:',qA,dqA
-!write(*,*) '    B:',qB,dqB
-!write(*,*) '    wA:',wAvals
-!write(*,*) '   xB:',xB
-!write(*,*) '   B:',wBvals,nB
-!write(*,*) '     ',qBvals
-!write(*,*) '   FluxA:',flxa
-!write(*,*) '   FluxD:',flxd
-!write(*,*) '   Final:',flx
-
   end subroutine flux2
 
   subroutine flux(ql,qr,dql,dqr,flx)
@@ -273,6 +273,8 @@ contains
       ! Symmetric flux
 !      flxd = 0.5d0*mu*(dql+dqr)
       flx=flxa-flxd
+!write(*,*) '   Orig FluxA:',flxa
+write(*,*) '   Orig FluxD:',0.5d0*(dql+dqr),C12*(dql-dqr),flxd
     endif
   end subroutine flux
   !

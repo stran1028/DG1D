@@ -23,23 +23,23 @@ program conservative_overset
   !
   ! Inputs
   cfl = 0.01d0
-  ainf = 2d0
+  ainf = 1d0
   muinf = 0.02d0
   q1 = 2d0
   qN = 0d0
   !
   ! Set up the problem and bases types
-!  call set_type('linear_advection',ainf,muinf,q1,qN)
   ilim = 0      ! flag to control slope limiting
   isupg = 0  ! supg flag
   ireg = 0 ! regularization flag
   ieuler = 0
   do conswitch = 0,0    ! cons overset loop 
-  do s = 2,2            ! shape function loop
+  do s = 1,1            ! shape function loop
   do noverlap = 1,1     ! foverlap loop
-  do order = 4,4      ! p-order loop
+  do order = 1,1      ! p-order loop
     sweep = 0d0
 
+!    call set_type('linear_advection',ainf,muinf,q1,qN,order)
     call set_type('burgers',ainf,muinf,q1,qN,order)
     write(*,*) '----------------------------------'
     write(*,*) 'INPUTS: '
@@ -87,13 +87,15 @@ program conservative_overset
       endif
 !      m2start = -0.25 - dx(2)*.99 !! stress test w/ 90% cut
 !     dx = 0.03125d0
-     dx = 0.03125d0/2d0
+!     dx = 0.03125d0/2d0
+      dx = 0.125d0
 
       ! Compute parameters
       dt=cfl*minval(dx)/ainf
-      ntime = 4600 ! NaN's at 4689 for p=4, dx = 0.015625
+!      ntime = 4600 ! NaN's at 4689 for p=4, dx = 0.015625
 !      ntime = nint(1.25d0/dt) ! T = 1.25 seconds for Burgers
-!      ntime = 1.*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
+      ntime = 1.*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
+!      ntime = 150
       write(*,*) ' '
       write(*,*) '    ainf, muinf = ',ainf,muinf
       if (index(pde_descriptor,'burgers') > 0) write(*,*) '    q1, qN = ',q1,qN  
