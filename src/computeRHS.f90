@@ -7,7 +7,7 @@ subroutine computeRHS(msh,isupg,dt)
   type(mesh), intent(inout) :: msh
   real*8, intent(in) :: dt
   integer :: i,j,k,e1,e2,isupg,cid
-  real*8 :: ql,qr,dql,dqr,flx,qtmp,dqtmp,qvals(msh%nshp),dqvals(msh%nshp),vol,w(msh%nshp)
+  real*8 :: ql,qr,dql,dqr,flx(msh%nshp),qtmp,dqtmp,qvals(msh%nshp),dqvals(msh%nshp),vol,w(msh%nshp)
   real*8 :: dudt,resid,tau
   integer, save :: iout=0
   !
@@ -65,44 +65,18 @@ subroutine computeRHS(msh,isupg,dt)
       if (e1.ne.e2) then
         ! Left flux boundary       
         if(cid.ge.i) then          
-          qvals = 1d0
-          call shapefunction(msh%nshp,-0.5d0,[-0.5d0,0.5d0],qvals,w,dqvals)
-          if(msh%iBC(i).eq.0) then 
-            call shapefunction(msh%nshp,msh%xe(2,e1),msh%xe(:,e1),msh%q(1,:,e1),qvals,dqvals)
-            ql = sum(qvals)
-            dql = sum(dqvals)/msh%dx(e1)
-          else if(msh%iBC(i).eq.1) then ! inflow
-            ql = qin
-            dql = 0d0
-          endif
-          call shapefunction(msh%nshp,msh%xe(1,i),msh%xe(:,i),msh%q(1,:,i),qvals,dqvals)
-          qr = sum(qvals)
-          dqr = sum(dqvals)/msh%dx(i)
-          call flux(ql,qr,dql,dqr,flx)
+          call flux2(msh,i,msh,e1,msh%xe(1,i),flx)
           do j = 1,msh%nshp
-              msh%rhs(:,j,i) = msh%rhs(:,j,i) + w(j)*flx
+              msh%rhs(:,j,i) = msh%rhs(:,j,i) + flx(j)
           enddo
 !          if(msh%child(i).ne.i) write(*,*) 'L flux boundary: ',w*flx
         endif
         
         if(cid.le.i) then 
           ! Right flux boundary
-          qvals = 1d0
-          call shapefunction(msh%nshp,0.5d0,[-0.5d0,0.5d0],qvals,w,dqvals)
-          call shapefunction(msh%nshp,msh%xe(2,i),msh%xe(:,i),msh%q(1,:,i),qvals,dqvals)
-          ql = sum(qvals)
-          dql = sum(dqvals)/msh%dx(i)
-          if(msh%iBC(i).eq.0) then 
-            call shapefunction(msh%nshp,msh%xe(1,e2),msh%xe(:,e2),msh%q(1,:,e2),qvals,dqvals)
-            qr = sum(qvals)
-            dqr = sum(dqvals)/msh%dx(e2)
-          else if(msh%iBC(i).eq.-1) then ! outflow
-            qr = qout
-            dqr = 0d0
-          endif
-          call flux(ql,qr,dql,dqr,flx)
+          call flux2(msh,i,msh,e2,msh%xe(2,i),flx)
           do j = 1,msh%nshp
-              msh%rhs(:,j,i) = msh%rhs(:,j,i) - w(j)*flx
+              msh%rhs(:,j,i) = msh%rhs(:,j,i) - flx(j)
           enddo
 !          if(msh%child(i).ne.i) write(*,*) 'R flux boundary: ',w*flx
         endif
