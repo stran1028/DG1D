@@ -1,17 +1,21 @@
 module pde
   use code_types
   use bases
-  character*20 :: pde_descriptor
+  character*20 :: pde_descriptor,dfluxtype
   integer, save :: pde_set=0
   real*8 :: a,mu,qin,qout,porder
 contains
-  subroutine set_type(pdetype,wavespeed,muinf,qA,qB,p)
+  subroutine set_type(pdetype,wavespeed,muinf,qA,qB,p,difftype)
     implicit none
-    character*(*) :: pdetype
+    character*(*) :: pdetype,difftype
     real*8, optional, intent(in) :: wavespeed,muinf,qA,qB
     integer :: p
     write(pde_descriptor,'(A20)') pdetype
     pde_descriptor=trim(adjustl(pde_descriptor))
+
+    write(dfluxtype,'(A20)') difftype
+    dfluxtype=trim(adjustl(dfluxtype))
+
     if (pde_descriptor .ne. 'linear_advection' .and. & 
         pde_descriptor .ne. 'burgers' ) then
        write(6,*) 'Only linear advection and burgers are implemented'
@@ -92,8 +96,6 @@ contains
     endif
   end subroutine initq
   !
-  ! New flux routine
-  ! Outputs entire bounday integral vector
   subroutine flux2(mshA,eidA,mshB,eidB,xloc,flx)
     !
     implicit none
@@ -121,12 +123,13 @@ contains
     dqA = sum(dqAvals)/mshA%dx(eidA)
 
     ! adjust xloc for periodic neighbor eidB
-    if((eidA.eq.1).and.(xloc.eq.mshA%xe(1,eidA))) then
-      xB = mshB%xe(2,eidB) - (mshA%xe(1,eidA)-xloc)  
-    else if((eidA.eq.mshA%nelem).and.(xloc.eq.mshA%xe(2,eidA))) then
-      xB = (xloc-mshA%xe(2,eidA)) + mshB%xe(1,eidB)
-    else
-      xB = xloc
+    xB = xloc
+    if (mshA%iperiodic.eq.1) then
+      if((eidA.eq.1).and.(xloc.eq.mshA%xe(1,eidA))) then
+        xB = mshB%xe(2,eidB) - (mshA%xe(1,eidA)-xloc)  
+      else if((eidA.eq.mshA%nelem).and.(xloc.eq.mshA%xe(2,eidA))) then
+        xB = (xloc-mshA%xe(2,eidA)) + mshB%xe(1,eidB)
+      endif
     endif
 
     ! Get Exterior State (B)
@@ -166,71 +169,65 @@ contains
     ! Advective fluxes
     if (index(pde_descriptor,'linear_advection') > 0 ) then
 !      ! LDG method
-!      C11 = 0.0d0
-!      C12 = 0.5d0*nA ! 0.5 dot n-
-!      flxa=wAvals*(a*(0.5d0*(qA+qB) + C12*(qA-qB)))
-
-       ! IP and BR2
-       flxa=wAvals*a*0.5d0*(qA+qB)
+      C11 = 0.0d0
+      C12 = 0.5d0*nA ! 0.5 dot n-
+      flxa=wAvals*(a*(0.5d0*(qA+qB) + C12*(qA-qB)))
     else if (index(pde_descriptor,'burgers') > 0) then
       ! LDG method
       C11 = 0.0d0
       C12 = 0.5d0*nA ! 0.5 dot n-
       flxa = (0.5d0*(0.5d0*(qA*qA+qB*qB)-C12*(qA+qB)*(qB-qA)))
       flxA = wAvals*flxa
-
-      ! IP or BR2 symmetric adv flux
-      ! flxa = wAvals*0.5d0*(0.5d0*(qA*qA+qB*qB))
     endif
    
     ! Diffusive Fluxes
     if (index(pde_descriptor,'linear_advection') > 0 ) then
       ! LDG method
-      C11 = 0.0d0
-      C12 = 0.5d0 ! 0.5 dot n-
+      if (index(dfluxtype,'localdg') > 0 ) then
+        C11 = 0.0d0
+        C12 = 0.5d0 ! 0.5 dot n-
+        flxd = wAvals*mu*(0.5d0*(dqA+dqB) + C11*(qA-qB) - C12*(dqA-dqB)) ! LDG method
 
-      flxd = wAvals*mu*(0.5d0*(dqA+dqB) + C11*(qA-qB) - C12*(dqA-dqB)) ! LDG method
+      ! Interior Penalty (from Persson):
+      else if (index(dfluxtype,'penalty') > 0 ) then
+        C11 = (porder+1d0)*(porder+1d0)/2d0 ! Shabazi penalty constant
+        C11 = C11/(mshA%dx(eidA))
 
-      ! Arnold/Shabazi Interior Penalty:
-      C11 = (porder+1d0)*(porder+1d0)/2d0 ! Shabazi penalty constant
-      C11 = C11/(mshA%dx(eidA))
-      write(*,*) 'C11 = ',C11 
-
-      flxd = 0.5d0*(dqA+dqB) - C11*(qA*nA+qB*nB)
-      flxd = wAvals*mu*flxd
- 
-!      flxd = 0.5d0*(dqAvals+dqBvals)*(wA*nA+wB*nB)
-!      flxd = flxd + 0.5d0*(dwAvals+dwBvals)*(qA*nA+qB*nB)
-!      flxd = flxd - wAvals*C11*(qA*nA+qB*nB)*(wA*nA+wB*nB) ! penalty term
-      
-    else if (index(pde_descriptor,'burgers') > 0) then
-      ! Arnold/Shabazi Interior Penalty:
-      C11 = (porder+1d0)*(porder+1d0)/2d0 ! Shabazi penalty constant
-      C11 = C11/(mshA%dx(eidA))
-       
-      flxd = 0.5d0*(dqA+dqB) - C11*(qA*nA+qB*nB)
-      flxd = wAvals*mu*flxd
-!      flxd = 0.5d0*(dqAvals+dqBvals)*(wA*nA+wB*nB)
-!      flxd = flxd + 0.5d0*(dwAvals+dwBvals)*(qA*nA+qB*nB)
-!      flxd = flxd - wAvals*C11*(qA*nA+qB*nB)*(wA*nA+wB*nB) ! penalty term
-
-      ! LDG according to Persson DG School
-      ! works best so far except on fine meshes & p>4
-!      C11 = 0.0d0*nA
-!      C12 = 0.5d0*nA ! 0.5 dot n-
-!      flxd = mu*(0.5d0*(dqA+dqB) + C11*(qA-qB) - C12*(dqA-dqB)) ! LDG method
-!      flxd = wAvals*flxd
-
-      ! Westhaven and Warburton:
+        flxd = 0.5d0*(dqA+dqB) - C11*(qA*nA+qB*nB)
+        flxd = wAvals*mu*flxd
 
       ! Symmetric flux
-!      flxd = wAvals*0.5d0*mu*(dqA+dqB)
+      else if (index(dfluxtype,'symmetric') > 0 ) then
+        flxd = wAvals*0.5d0*mu*(dqA+dqB)
+      endif
+    else if (index(pde_descriptor,'burgers') > 0) then
+      ! LDG method
+      if (index(dfluxtype,'localdg') > 0 ) then
+        C11 = 0.0d0*nA
+        C12 = 0.5d0*nA ! 0.5 dot n-
+        flxd = mu*(0.5d0*(dqA+dqB) + C11*(qA-qB) - C12*(dqA-dqB)) ! LDG method
+        flxd = wAvals*flxd
+
+      ! Interior Penalty (from Persson):
+      else if (index(dfluxtype,'penalty') > 0 ) then
+        C11 = (porder+1d0)*(porder+1d0)/2d0 ! Shabazi penalty constant
+        C11 = C11/(mshA%dx(eidA))
+       
+        flxd = 0.5d0*(dqA+dqB) - C11*(qA*nA+qB*nB)
+        flxd = wAvals*mu*flxd
+
+      ! Symmetric flux
+      else if (index(dfluxtype,'symmetric') > 0 ) then
+        flxd = wAvals*0.5d0*mu*(dqA+dqB)
+      endif
     endif
  
     ! Final Flux
     flx=flxa-flxd
   end subroutine flux2
 
+!  Deprecated flux calculation
+!
   subroutine flux(ql,qr,dql,dqr,flx)
     !
     implicit none
@@ -249,6 +246,7 @@ contains
       C12 = 0.5d0 ! 0.5 dot n-
 
       flxa=a*(0.5d0*(ql+qr) + C12*(ql-qr) )
+!      flxa=a*(0.5d0*(ql+qr))
       flxd = mu*(0.5d0*(dql+dqr) + C11*(ql-qr) - C12*(dql-dqr)) ! LDG method
 
       flx=flxa-flxd

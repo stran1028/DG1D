@@ -148,7 +148,7 @@ contains
     !
     integer :: i,j,k,e,nrows,aa,bb,cc,eid,neigh,id,pidA,pidB
     real*8 :: x1,x2,xp1,xp2,f1,f2,y1,y2,yp1,yp2,qA(mshA%nshp),qB(mshB%nshp)
-    real*8 :: xrem(2),xcut(2),xc,lcut,xg,vol,flx,qL,qR,dqL,dqR,fact,xfac
+    real*8 :: xrem(2),xcut(2),xc,lcut,xg,vol,flx(mshA%nshp),qL,qR,dqL,dqR,fact,xfac
     real*8 :: wtmp(mshA%nshp),dwtmp(mshA%nshp),tmp
     real*8 ::qtmp(mshA%nshp),dqtmp(mshA%nshp),dq,dvol(mshA%nshp),dflx(mshA%nshp)
     real*8 :: qval,dqval,dudt,resid,tau
@@ -220,34 +220,37 @@ contains
                endif
 
                ! add intermesh flux from mesh B interior to mesh A L node
-               wtmp = 1d0
-               call shapefunction(mshA%nshp,xcut(2),[xp1,xp2],wtmp,wtmp,dwtmp)
-               call shapefunction(mshB%nshp,xcut(2),[yp1,yp2],qB,qtmp,dqtmp)
-               qL = sum(qtmp)
-               dqL = sum(dqtmp)/mshB%dx(pidB)
-               call shapefunction(mshA%nshp,xcut(2),[xp1,xp2],qA,qtmp,dqtmp)
-               qR = sum(qtmp)
-               dqR = sum(dqtmp)/mshA%dx(pidA)
-               call flux(qL,qR,dqL,dqR,flx)
+!               wtmp = 1d0
+!               call shapefunction(mshA%nshp,xcut(2),[xp1,xp2],wtmp,wtmp,dwtmp)
+!               call shapefunction(mshB%nshp,xcut(2),[yp1,yp2],qB,qtmp,dqtmp)
+!               qL = sum(qtmp)
+!               dqL = sum(dqtmp)/mshB%dx(pidB)
+!               call shapefunction(mshA%nshp,xcut(2),[xp1,xp2],qA,qtmp,dqtmp)
+!               qR = sum(qtmp)
+!               dqR = sum(dqtmp)/mshA%dx(pidA)
+!               call flux(qL,qR,dqL,dqR,flx(1))
+               call flux2(mshA,pidA,mshB,pidB,xcut(2),flx)
                do k = 1,mshA%nshp
-                 mshA%rhs(:,k,pidA) = mshA%rhs(:,k,pidA) + wtmp(k)*flx
+                 mshA%rhs(:,k,pidA) = mshA%rhs(:,k,pidA) + flx(k)
                enddo
                if(debug.eq.1) write(*,*) 'L Debug fflux 1: ',xcut(2),wtmp,qL,qR,flx
 
                if(pidA.eq.eid) then ! only do if not using cell agglomeration
                  ! Handle mesh A R node flux
-                 wtmp = 1d0
-                 call shapefunction(mshA%nshp,x2,[xp1,xp2],wtmp,wtmp,dwtmp)
-                 neigh = mshA%face(2,eid)
-                 call shapefunction(mshA%nshp,x2,[xp1,xp2],qA,qtmp,dqtmp)
-                 qL = sum(qtmp)
-                 dqL = sum(dqtmp)/mshA%dx(pidA)
-                 call shapefunction(mshA%nshp,x2,mshA%xe(:,neigh),mshA%q(1,:,neigh),qtmp,dqtmp)
-                 qR = sum(qtmp)
-                 dqR = sum(dqtmp)/mshA%dx(neigh)
-                 call flux(qL,qR,dqL,dqR,flx)
+!                 wtmp = 1d0
+!                 call shapefunction(mshA%nshp,x2,[xp1,xp2],wtmp,wtmp,dwtmp)
+!                 neigh = mshA%face(2,eid)
+!                 call shapefunction(mshA%nshp,x2,[xp1,xp2],qA,qtmp,dqtmp)
+!                 qL = sum(qtmp)
+!                 dqL = sum(dqtmp)/mshA%dx(pidA)
+!                 call shapefunction(mshA%nshp,x2,mshA%xe(:,neigh),mshA%q(1,:,neigh),qtmp,dqtmp)
+!                 qR = sum(qtmp)
+!                 dqR = sum(dqtmp)/mshA%dx(neigh)
+!                 call flux(qL,qR,dqL,dqR,flx(1))
+                 call flux2(mshA,pidA,mshA,mshA%face(2,pidA),x2,flx)
+
                  do k = 1,mshA%nshp
-                   mshA%rhs(:,k,pidA) = mshA%rhs(:,k,pidA) - wtmp(k)*flx
+                   mshA%rhs(:,k,pidA) = mshA%rhs(:,k,pidA) - flx(k)
                  enddo
                  if(debug.eq.1) write(*,*) 'R Debug fflux 2: ',x2,wtmp,qL,qR,flx
                endif
@@ -277,35 +280,18 @@ contains
 
                if(pidA.eq.eid) then ! only do if not using cell agglomeration
                  ! Handle mesh A L node flux 
-                 wtmp = 1d0
-                 call shapefunction(mshA%nshp,x1,[xp1,xp2],wtmp,wtmp,dwtmp)
-                 neigh = mshA%face(1,eid)
-                 call shapefunction(mshA%nshp,x1,mshA%xe(:,neigh),mshA%q(1,:,neigh),qtmp,dqtmp)
-                 qL = sum(qtmp)
-                 dqL = sum(dqtmp)/mshA%dx(neigh)
-                 call shapefunction(mshA%nshp,x1,[xp1,xp2],qA,qtmp,dqtmp)
-                 qR = sum(qtmp)
-                 dqR = sum(dqtmp)/mshA%dx(pidA)
-                 call flux(qL,qR,dqL,dqR,flx)
+                 call flux2(mshA,pidA,mshA,mshA%face(1,pidA),x1,flx)
                  do k = 1,mshA%nshp
-                   mshA%rhs(:,k,pidA) = mshA%rhs(:,k,pidA) + wtmp(k)*flx
+                   mshA%rhs(:,k,pidA) = mshA%rhs(:,k,pidA) + flx(k)
                  enddo
                  if(debug.eq.1)  write(*,*) 'L Debug fflux 3: ',x1,wtmp,qL,qR,flx
                endif
 
                ! add intermesh flux from mesh B interior to mesh A R node
                ! Note we're adding to the parent element pidA, not eid
-               wtmp = 1d0
-               call shapefunction(mshA%nshp,xcut(1),[xp1,xp2],wtmp,wtmp,dwtmp)
-               call shapefunction(mshB%nshp,xcut(1),[y1,y2],qB,qtmp,dqtmp)
-               qR = sum(qtmp)
-               dqR = sum(dqtmp)/mshB%dx(pidB)
-               call shapefunction(mshA%nshp,xcut(1),[xp1,xp2],qA,qtmp,dqtmp)
-               qL = sum(qtmp)
-               dqL = sum(dqtmp)/mshA%dx(pidA)
-               call flux(ql,qr,dql,dqr,flx)
+               call flux2(mshA,pidA,mshB,pidB,xcut(1),flx)
                do k = 1,mshA%nshp
-                 mshA%rhs(:,k,pidA) = mshA%rhs(:,k,pidA) - wtmp(k)*flx
+                 mshA%rhs(:,k,pidA) = mshA%rhs(:,k,pidA) - flx(k)
                enddo
                if(debug.eq.1)  write(*,*) 'R Debug fflux 4: ',xcut(1),wtmp,qL,qR,flx
 

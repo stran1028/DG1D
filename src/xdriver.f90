@@ -6,22 +6,26 @@ program conservative_overset
   use slopelimiter
   implicit none
   !
-  integer, parameter :: nmesh=1
+  integer, parameter :: nmesh=2
   integer :: i,s,ntime,n,j,k,m,order,consoverset,ilim,ieuler, isupg,ireg,ii,jj,nn
   real*8 :: dt,mom1(2,nmesh),mom0(2,nmesh)
   real*8 :: err(nmesh)
   real*8, allocatable :: elemInfo1(:,:),elemInfo2(:,:)
   integer :: nincomp1,nincomp2,nrk,debug
-  integer :: conswitch,noverlap
+  integer :: conswitch,noverlap,dswitch
   real*8 :: rk(4),dx(nmesh),ainf,muinf,cfl,foverlap,sweep(5,3)
   real*8 :: test1(6),test2(6)
   real*8 :: time(2),m2start,q1,qN
   integer :: h,isMerged(nmesh)
+  character*20 :: pdetype,difftype
+
   !
   type(mesh), allocatable :: msh(:)
   allocate(msh(nmesh))
   !
   ! Inputs
+  pdetype = 'burgers' ! 'burgers', 'linear_advection'
+  difftype = 'penalty'         ! 'symmetric', 'localdg', 'penalty'
   cfl = 0.01d0
   ainf = 1d0
   muinf = 0.02d0
@@ -33,14 +37,24 @@ program conservative_overset
   isupg = 0  ! supg flag
   ireg = 0 ! regularization flag
   ieuler = 0
-  do conswitch = 0,0    ! cons overset loop 
+
+  do conswitch = 0,1    ! cons overset loop 
   do s = 1,1            ! shape function loop
-  do noverlap = 1,1     ! foverlap loop
-  do order = 1,1      ! p-order loop
+  do dswitch = 1,2
+  do noverlap = 3,3     ! foverlap loop
+  do order = 1,4      ! p-order loop
     sweep = 0d0
 
-!    call set_type('linear_advection',ainf,muinf,q1,qN,order)
-    call set_type('burgers',ainf,muinf,q1,qN,order)
+    if(dswitch.eq.1) then 
+      difftype = 'localdg'
+    else if(dswitch.eq.2) then 
+      difftype = 'penalty'
+    else
+      write(*,*) 'Wrong diff flux type. dswitch = ',dswitch
+      cycle
+    endif
+
+    call set_type(pdetype,ainf,muinf,q1,qN,order,difftype)
     write(*,*) '----------------------------------'
     write(*,*) 'INPUTS: '
 
@@ -71,32 +85,32 @@ program conservative_overset
     endif
 
     ! Do a mesh sweep
-    do h = 2,2
+    do h = 1,5
       ! start timer
       call cpu_time(time(1))
       if(h.eq.1) then  
-!        dx = [0.25d0,0.125d0]
+        dx = [0.25d0,0.125d0]
       elseif(h.eq.2) then 
-!        dx = [0.125d0,0.0625d0]
+        dx = [0.125d0,0.0625d0]
       elseif(h.eq.3) then 
-!        dx = [0.0625d0,0.03125d0]
+        dx = [0.0625d0,0.03125d0]
       elseif(h.eq.4) then 
-!        dx = [0.03125d0,0.015625d0]
+        dx = [0.03125d0,0.015625d0]
       elseif(h.eq.5) then 
-!        dx = [0.015625d0,0.0078125d0]
+        dx = [0.015625d0,0.0078125d0]
       endif
-!      m2start = -0.25 - dx(2)*.99 !! stress test w/ 90% cut
-!     dx = 0.03125d0
-!     dx = 0.03125d0/2d0
-      dx = 0.125d0
+      m2start = -0.25 - dx(2)*.99 !! stress test w/ 90% cut
 
       ! Compute parameters
       dt=cfl*minval(dx)/ainf
-!      ntime = 4600 ! NaN's at 4689 for p=4, dx = 0.015625
-!      ntime = nint(1.25d0/dt) ! T = 1.25 seconds for Burgers
-      ntime = 1.*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
-!      ntime = 150
+      if (index(pde_descriptor,'burgers') > 0) then
+        ntime = nint(1.25d0/dt) ! T = 1.25 seconds for Burgers      
+      else if (index(pde_descriptor,'burgers') > 0) then 
+        ntime = 1.*nint(2d0/(ainf*dt)) ! assuming lenght of domain is 2
+      endif
       write(*,*) ' '
+      write(*,*) '    PDE: ',pdetype
+      write(*,*) '    Diff Flux: ',difftype
       write(*,*) '    ainf, muinf = ',ainf,muinf
       if (index(pde_descriptor,'burgers') > 0) write(*,*) '    q1, qN = ',q1,qN  
       write(*,*) '    h, dx = ',h,dx
@@ -111,7 +125,7 @@ program conservative_overset
       ! Initialize the mesh(es)
       !-------------------------
       call init_mesh(msh(1),[-1d0,1d0],dx(1),1,order)
-!      call init_mesh(msh(2),[m2start,m2start+0.75d0],dx(2),0,order)
+      call init_mesh(msh(2),[m2start,m2start+0.75d0],dx(2),0,order)
       call initBC(msh(1)) ! only call for msh1 b/c it's the outside mesh
       !
       ! Blank out coarser overlapping cells 
@@ -164,8 +178,8 @@ program conservative_overset
         call projectChild(msh(1),elemInfo1,nincomp1,msh(1)%qexact)
         call projectChild(msh(2),elemInfo2,nincomp2,msh(2)%qexact)
       endif
-!      call computeMoments(msh(1),mom0(:,1),err(1),nincomp1,elemInfo1)
-!      call computeMoments(msh(2),mom0(:,2),err(2),nincomp2,elemInfo2)
+      call computeMoments(msh(1),mom0(:,1),err(1),nincomp1,elemInfo1)
+      call computeMoments(msh(2),mom0(:,2),err(2),nincomp2,elemInfo2)
       do n=1,nmesh
         call output(n,msh(n))
       enddo
@@ -308,20 +322,20 @@ program conservative_overset
       do n=1,nmesh
         call output(nmesh+n,msh(n))
       enddo
-!      call computeMoments(msh(1),mom1(:,1),err(1),nincomp1,elemInfo1)
-!      call computeMoments(msh(2),mom1(:,2),err(2),nincomp2,elemInfo2)
-!      sweep(h,1) = sum(err(:))
-!      sweep(h,2) = sum(mom1(1,:))
-!      sweep(h,3) = sum(mom1(1,:))-sum(mom0(1,:))
-!      write(*,*) '    Min Rem Frac M1: ',minval(msh(1)%dxcut)/dx(1)
-!      write(*,*) '    Min Rem Frac M2: ',minval(msh(2)%dxcut)/dx(2)
+      call computeMoments(msh(1),mom1(:,1),err(1),nincomp1,elemInfo1)
+      call computeMoments(msh(2),mom1(:,2),err(2),nincomp2,elemInfo2)
+      sweep(h,1) = sum(err(:))
+      sweep(h,2) = sum(mom1(1,:))
+      sweep(h,3) = sum(mom1(1,:))-sum(mom0(1,:))
+      write(*,*) '    Min Rem Frac M1: ',minval(msh(1)%dxcut)/dx(1)
+      write(*,*) '    Min Rem Frac M2: ',minval(msh(2)%dxcut)/dx(2)
       
       ! Clear memory
       do n = 1,nmesh
         call clearMem(msh(n))
       enddo
       if (allocated(elemInfo1)) deallocate(elemInfo1)
-!      if (allocated(elemInfo2)) deallocate(elemInfo2)
+      if (allocated(elemInfo2)) deallocate(elemInfo2)
 
       ! call timer
       call cpu_time(time(2))
@@ -338,6 +352,7 @@ program conservative_overset
     write(*,*) '----------------------------------'
   enddo ! p sweep
   enddo ! overflap
+  enddo ! diffusive flux 
   enddo ! shape function
   enddo ! cons overset
 end program conservative_overset
