@@ -190,7 +190,7 @@ program conservative_overset
       ! Iterate in time
       !-----------------------
       rk = [1d0/4d0, 8d0/15d0,5d0/12d0, 3d0/4d0];
-      do i=1,ntime
+      tloop: do i=1,ntime
 !       write(*,*) '--------------------------'
 !       write(*,*) 'TIMESTEP ',i
 !       write(*,*) '--------------------------'
@@ -306,7 +306,7 @@ program conservative_overset
                 do nn = 1,nmesh
                   call output(nmesh+nn,msh(nn))
                 enddo
-                call exit(1)
+                exit tloop
               endif
             enddo
             enddo
@@ -316,8 +316,7 @@ program conservative_overset
             msh(n)%qold = msh(n)%q
           enddo
         endif ! Euler or RK
-      enddo ! timesteps
-      
+      enddo tloop ! timesteps
       ! write final output
       do n=1,nmesh
         call output(nmesh+n,msh(n))
